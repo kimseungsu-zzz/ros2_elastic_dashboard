@@ -5,10 +5,10 @@
 // 'flutter create' template.
 
 // The application's name. By default this is also the title of the Flutter window.
-PRODUCT_NAME = elastic_dashboard
+PRODUCT_NAME = ros2_elastic_dashboard
 
 // The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = com.gold872.elasticDashboard
+PRODUCT_BUNDLE_IDENTIFIER = com.github.kimseungsu-zzz.ros2-elastic-dashboard
 
 // The copyright displayed in application information
 PRODUCT_COPYRIGHT = Copyright © 2023 com.gold872. All rights reserved.

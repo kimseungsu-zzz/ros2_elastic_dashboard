@@ -26,4 +26,6 @@ The bridge creates subscriptions on the Viewer machine and requires no changes t
 
 Tabs, list layouts and supported widgets from older Elastic layout files still load. Use **Edit Properties → Topic** to update a legacy topic path. The Cameras tab accepts ROS string topics carrying MJPEG or WHEP URLs. ROS 2 discovery runs in the desktop app.
 
+The ROS 2 build stores its preferences, saved layouts, and logs separately from the original Elastic app. Existing settings are not copied automatically.
+
 See [CONTRIBUTING.md](CONTRIBUTING.md) for build and test commands.

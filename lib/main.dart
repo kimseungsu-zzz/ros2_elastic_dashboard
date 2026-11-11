@@ -10,6 +10,7 @@ import 'package:dot_cast/dot_cast.dart';
 import 'package:flex_seed_scheme/flex_seed_scheme.dart';
 import 'package:logger/logger.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:path/path.dart' as path;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:material_ui/material_ui.dart';
@@ -31,6 +32,7 @@ void main() async {
 
   if (kIsWeb) {
     BrowserContextMenu.disableContextMenu();
+    SharedPreferences.setPrefix('ros2_elastic_dashboard.');
   }
 
   final PackageInfo packageInfo = await PackageInfo.fromPlatform();
@@ -173,10 +175,12 @@ Future<void> _restoreWindowPosition(
 /// Makes a backup copy of the current shared preferences file.
 Future<void> _backupPreferences(String appFolderPath) async {
   try {
-    final String original = '$appFolderPath\\shared_preferences.json';
-    final String backup = '$appFolderPath\\shared_preferences_backup.json';
+    final String original = path.join(appFolderPath, 'shared_preferences.json');
+    final String backup = path.join(
+      appFolderPath,
+      'shared_preferences_backup.json',
+    );
 
-    if (await File(backup).exists()) await File(backup).delete(recursive: true);
     await File(original).copy(backup);
 
     logger.info('Backed up shared_preferences.json to $backup');
@@ -185,23 +189,20 @@ Future<void> _backupPreferences(String appFolderPath) async {
   }
 }
 
-/// Removes current version of shared_preferences file and restores previous
-/// user settings from a backup file (if it exists).
+/// Restores preferences only when the backup contains a JSON object.
 Future<void> _restorePreferencesFromBackup(String appFolderPath) async {
   try {
-    final String original = '$appFolderPath\\shared_preferences.json';
-    final String backup = '$appFolderPath\\shared_preferences_backup.json';
+    final String original = path.join(appFolderPath, 'shared_preferences.json');
+    final String backup = path.join(
+      appFolderPath,
+      'shared_preferences_backup.json',
+    );
 
-    await File(original).delete(recursive: true);
-
-    if (await File(backup).exists()) {
-      // Check if current backup copy is not broken by looking for letters and "
-      // symbol in it to replace it as an original Settings file
-      final String preferences = await File(backup).readAsString();
-      if (preferences.contains('"') && preferences.contains(RegExp('[A-z]'))) {
-        logger.info('Restoring shared_preferences from backup file at $backup');
-        await File(backup).copy(original);
-      }
+    final file = File(backup);
+    if (await file.exists() &&
+        jsonDecode(await file.readAsString()) is Map<String, dynamic>) {
+      await file.copy(original);
+      logger.info('Restored shared_preferences from $backup');
     }
   } catch (_) {
     /* Do nothing */

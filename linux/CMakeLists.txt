@@ -4,10 +4,10 @@ project(runner LANGUAGES CXX)
 
 # The name of the executable created for the application. Change this to change
 # the on-disk name of your application.
-set(BINARY_NAME "elastic_dashboard")
+set(BINARY_NAME "ros2_elastic_dashboard")
 # The unique GTK application identifier for this application. See:
 # https://wiki.gnome.org/HowDoI/ChooseApplicationID
-set(APPLICATION_ID "com.gold872.elastic_dashboard")
+set(APPLICATION_ID "com.github.kimseungsu_zzz.ros2_elastic_dashboard")
 
 # Explicitly opt in to modern CMake behaviors to avoid warnings with recent
 # versions of CMake.

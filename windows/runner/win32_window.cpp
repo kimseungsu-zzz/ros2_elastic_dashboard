@@ -16,7 +16,7 @@ namespace {
 #define DWMWA_USE_IMMERSIVE_DARK_MODE 20
 #endif
 
-constexpr const wchar_t kWindowClassName[] = L"FLUTTER_RUNNER_WIN32_WINDOW";
+constexpr const wchar_t kWindowClassName[] = L"ROS2_ELASTIC_DASHBOARD_WINDOW";
 
 /// Registry key for app theme preference.
 ///
@@ -123,10 +123,10 @@ Win32Window::~Win32Window() {
 bool Win32Window::Create(const std::wstring& title,
                          const Point& origin,
                          const Size& size) {
-  HANDLE hMutexHandle=CreateMutex(NULL, TRUE, L"elastic.single.instance.mutex");
-  HWND handle=FindWindowA(NULL, "elastic_dashboard");
+  HANDLE hMutexHandle = CreateMutex(NULL, TRUE, L"ros2.elastic.single.instance.mutex");
 
   if (GetLastError() == ERROR_ALREADY_EXISTS) {
+    HWND handle = FindWindowW(kWindowClassName, nullptr);
     WINDOWPLACEMENT place = { sizeof(WINDOWPLACEMENT) };
     GetWindowPlacement(handle, &place);
     switch(place.showCmd) {

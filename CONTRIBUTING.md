@@ -33,7 +33,7 @@ To ensure a standardized process, please follow this development workflow:
 
 On x86-64 or ARM64 Linux with Nix flakes enabled, run the desktop app with
 `nix run .` or build the release bundle with `nix build .`. The resulting
-executable is `./result/bin/elastic_dashboard`.
+executable is `./result/bin/ros2_elastic_dashboard`.
 
 To develop with the Flutter SDK and Linux build dependencies from the flake, first load the ROS environment described in [README.md](README.md).
 

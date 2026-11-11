@@ -1,5 +1,5 @@
-#define MyAppName "Elastic"
-#define MyAppFolderName "FRC Elastic"
+#define MyAppName "Elastic ROS 2"
+#define MyAppFolderName "Elastic ROS 2"
 #define MyAppPublisher "Gold87"
 #define MyAppURL "https://github.com/Gold872/elastic_dashboard/"
 #define MyAppExeName "elastic_dashboard.exe"
@@ -11,7 +11,7 @@
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application. Do not use the same AppId value in installers for other applications.
 ; (To generate a new GUID, click Tools | Generate GUID inside the IDE.)
-AppId={{2746922E-A2AC-4987-AF02-714F429C7C77}
+AppId={{B85F02E1-EB92-4F9E-AF37-CC76E7FD88EA}
 AppName={#MyAppName}
 AppVersion={#ApplicationVersion}
 AppVerName={#MyAppName} {#AppVersionName}

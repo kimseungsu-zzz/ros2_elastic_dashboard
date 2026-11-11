@@ -97,7 +97,7 @@
             flutterBuildFlags = [
               "--dart-define=ELASTIC_WPILIB=false"
             ];
-            meta.mainProgram = "elastic_dashboard";
+            meta.mainProgram = "ros2_elastic_dashboard";
           };
         }
       );
