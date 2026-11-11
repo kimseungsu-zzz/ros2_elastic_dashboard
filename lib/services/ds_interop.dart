@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -10,6 +11,8 @@ import 'package:elastic_dashboard/services/log.dart';
 class DSInteropClient {
   final String serverBaseAddress = '127.0.0.1';
   bool _serverConnectionActive = false;
+  bool _disposed = false;
+  Timer? _retry;
 
   ValueNotifier<bool> connectionStatus = ValueNotifier(false);
   ValueNotifier<String?> ipNotifier = ValueNotifier(null);
@@ -22,14 +25,14 @@ class DSInteropClient {
   }
 
   Future<void> _connect() async {
-    if (_serverConnectionActive) {
+    if (_disposed || _serverConnectionActive) {
       return;
     }
     return _dsSocketConnect();
   }
 
   Future<void> _dsSocketConnect() async {
-    if (_serverConnectionActive) {
+    if (_disposed || _serverConnectionActive) {
       return;
     }
     try {
@@ -39,15 +42,18 @@ class DSInteropClient {
       await _socket!.ready;
     } catch (e) {
       _socket = null;
+      if (_disposed) return;
       logger.debug(
         'Failed to connect to Driver Station on Websocket port 6768, attempting to reconnect in 1 second.',
       );
-      Future.delayed(const Duration(seconds: 1), _dsSocketConnect);
+      _retry = Timer(const Duration(seconds: 1), _dsSocketConnect);
       return;
     }
 
+    if (_disposed) return;
     _socket!.stream.listen(
       (data) {
+        if (_disposed) return;
         if (!_serverConnectionActive) {
           logger.info('Driver Station connected on Websocket port 6768');
           _serverConnectionActive = true;
@@ -105,7 +111,7 @@ class DSInteropClient {
   }
 
   void _dsSocketClose() {
-    if (!_serverConnectionActive) {
+    if (_disposed || !_serverConnectionActive) {
       return;
     }
 
@@ -121,6 +127,15 @@ class DSInteropClient {
       'Driver Station connection on Websocket port 6768 closed, attempting to reconnect in 1 second.',
     );
 
-    Future.delayed(const Duration(seconds: 1), _connect);
+    _retry = Timer(const Duration(seconds: 1), _connect);
+  }
+
+  void dispose() {
+    _disposed = true;
+    _retry?.cancel();
+    _socket?.sink.close(status.goingAway);
+    connectionStatus.dispose();
+    ipNotifier.dispose();
+    dsHeightNotifier.dispose();
   }
 }

@@ -7,8 +7,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:material_ui/material_ui.dart';
 
-import 'package:elastic_dashboard/services/ip_address_util.dart';
-import 'package:elastic_dashboard/services/nt_connection.dart';
 import 'package:elastic_dashboard/services/settings.dart';
 import 'package:elastic_dashboard/widgets/dialog_widgets/dialog_color_picker.dart';
 import 'package:elastic_dashboard/widgets/dialog_widgets/dialog_dropdown_chooser.dart';
@@ -20,14 +18,6 @@ import '../test_util.dart';
 
 class FakeSettingsMethods extends Mock {
   void changeColor();
-
-  void changeIPAddress();
-
-  void changeTeamNumber();
-
-  void changeIPAddressMode();
-
-  void changeNTServerMode();
 
   void changeShowGrid();
 
@@ -41,10 +31,6 @@ class FakeSettingsMethods extends Mock {
 
   void changeLockLayout();
 
-  void changeDefaultPeriod();
-
-  void changeDefaultGraphPeriod();
-
   void changeThemeVariant();
 
   void changeLogLevel();
@@ -52,8 +38,6 @@ class FakeSettingsMethods extends Mock {
   void changeGridDPIOverride();
 
   void openAssetsFolder();
-
-  void changeAutoSubmitButton();
 }
 
 void main() {
@@ -62,7 +46,6 @@ void main() {
   late SharedPreferences preferences;
   late FakeSettingsMethods fakeSettings;
 
-  final networkSettings = find.widgetWithText(Tab, 'Network');
   final appearanceSettings = find.widgetWithText(Tab, 'Appearance');
   final devSettings = find.widgetWithText(Tab, 'Developer (Advanced)');
 
@@ -72,10 +55,6 @@ void main() {
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({
-      PrefKeys.ipAddress: '127.0.0.1',
-      PrefKeys.teamNumber: 353,
-      PrefKeys.ipAddressMode: IPAddressMode.driverStation.id,
-      PrefKeys.ntTargetServer: NTServerTarget.robotCode.index,
       PrefKeys.teamColor: Colors.blueAccent.toARGB32(),
       PrefKeys.showGrid: false,
       PrefKeys.gridSize: 128,
@@ -83,11 +62,8 @@ void main() {
       PrefKeys.autoResizeToDS: false,
       PrefKeys.rememberWindowPosition: false,
       PrefKeys.layoutLocked: false,
-      PrefKeys.defaultPeriod: 0.10,
-      PrefKeys.defaultGraphPeriod: 0.033,
       PrefKeys.themeVariant: FlexSchemeVariant.chroma.variantName,
       PrefKeys.logLevel: Level.trace.levelName,
-      PrefKeys.autoTextSubmitButton: false,
     });
 
     preferences = await SharedPreferences.getInstance();
@@ -102,7 +78,6 @@ void main() {
       MaterialApp(
         home: Scaffold(
           body: SettingsDialog(
-            ntConnection: createMockOfflineNT4(),
             preferences: preferences,
           ),
         ),
@@ -112,36 +87,6 @@ void main() {
     await widgetTester.pumpAndSettle();
 
     expect(find.text('Settings'), findsOneWidget);
-
-    expect(networkSettings, findsOneWidget);
-    expect(appearanceSettings, findsOneWidget);
-    expect(devSettings, findsOneWidget);
-
-    expect(find.text('Team Number'), findsOneWidget);
-    expect(find.text('IP Address Mode'), findsOneWidget);
-    expect(find.text('IP Address'), findsOneWidget);
-    expect(find.text('Target Server'), findsOneWidget);
-    expect(find.text('Default Period'), findsOneWidget);
-    expect(find.text('Default Graph Period'), findsOneWidget);
-
-    expect(find.text('Team Color'), findsNothing);
-    expect(find.text('Theme Variant'), findsNothing);
-    expect(find.text('Show Grid'), findsNothing);
-    expect(find.text('Grid Size'), findsNothing);
-    expect(find.text('Corner Radius'), findsNothing);
-    expect(find.text('Resize to Driver Station Height'), findsNothing);
-    expect(find.text('Remember Window Position'), findsNothing);
-    expect(find.text('Lock Layout'), findsNothing);
-
-    expect(appearanceSettings, findsOneWidget);
-    await widgetTester.tap(appearanceSettings);
-    await widgetTester.pumpAndSettle();
-
-    expect(find.text('Team Number'), findsNothing);
-    expect(find.text('IP Address Mode'), findsNothing);
-    expect(find.text('IP Address'), findsNothing);
-    expect(find.text('Default Period'), findsNothing);
-    expect(find.text('Default Graph Period'), findsNothing);
 
     expect(find.text('Team Color'), findsOneWidget);
     expect(find.text('Show Grid'), findsWidgets);
@@ -172,258 +117,6 @@ void main() {
     await widgetTester.pumpAndSettle();
   });
 
-  testWidgets('Change team number', (widgetTester) async {
-    FlutterError.onError = ignoreOverflowErrors;
-
-    await widgetTester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: SettingsDialog(
-            ntConnection: createMockOfflineNT4(),
-            preferences: preferences,
-            onTeamNumberChanged: (data) async {
-              fakeSettings.changeTeamNumber();
-
-              await preferences.setInt(PrefKeys.teamNumber, int.parse(data!));
-            },
-          ),
-        ),
-      ),
-    );
-
-    await widgetTester.pumpAndSettle();
-
-    final teamNumberField = find.widgetWithText(DialogTextInput, 'Team Number');
-
-    expect(teamNumberField, findsOneWidget);
-    expect(
-      find.descendant(of: teamNumberField, matching: find.text('353')),
-      findsOneWidget,
-    );
-
-    await widgetTester.enterText(teamNumberField, '2601');
-    await widgetTester.testTextInput.receiveAction(TextInputAction.done);
-    await widgetTester.pump();
-
-    expect(preferences.getInt(PrefKeys.teamNumber), 2601);
-    expect(preferences.getString(PrefKeys.ipAddress), '127.0.0.1');
-    verify(fakeSettings.changeTeamNumber()).called(greaterThanOrEqualTo(1));
-  });
-
-  testWidgets('Change IP address mode', (widgetTester) async {
-    FlutterError.onError = ignoreOverflowErrors;
-
-    await widgetTester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: SettingsDialog(
-            ntConnection: createMockOfflineNT4(),
-            preferences: preferences,
-            onIPAddressModeChanged: (mode) {
-              fakeSettings.changeIPAddressMode();
-            },
-          ),
-        ),
-      ),
-    );
-
-    await widgetTester.pumpAndSettle();
-
-    final ipAddressMode = find.byType(DialogDropdownChooser<IPAddressMode>);
-
-    expect(ipAddressMode, findsOneWidget);
-
-    expect(find.text('Driver Station'), findsOneWidget);
-
-    await widgetTester.tap(ipAddressMode);
-    await widgetTester.pumpAndSettle();
-
-    expect(find.text('Team Number (10.TE.AM.2)'), findsOneWidget);
-
-    await widgetTester.tap(find.text('Team Number (10.TE.AM.2)'));
-    await widgetTester.pumpAndSettle();
-
-    expect(find.text('Driver Station'), findsNothing);
-    expect(find.text('Team Number (10.TE.AM.2)'), findsOneWidget);
-
-    await widgetTester.tap(find.text('Team Number (10.TE.AM.2)'));
-    await widgetTester.pumpAndSettle();
-
-    expect(find.text('Driver Station'), findsOneWidget);
-
-    await widgetTester.tap(find.text('Driver Station'));
-    await widgetTester.pumpAndSettle();
-
-    verify(fakeSettings.changeIPAddressMode()).called(2);
-  });
-
-  testWidgets('Change IP address', (widgetTester) async {
-    FlutterError.onError = ignoreOverflowErrors;
-
-    await widgetTester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: SettingsDialog(
-            ntConnection: createMockOfflineNT4(),
-            preferences: preferences,
-            onIPAddressChanged: (data) async {
-              fakeSettings.changeIPAddress();
-
-              await preferences.setString(PrefKeys.ipAddress, data!);
-            },
-          ),
-        ),
-      ),
-    );
-
-    await widgetTester.pumpAndSettle();
-
-    final ipAddressField = find.widgetWithText(DialogTextInput, 'IP Address');
-
-    expect(ipAddressField, findsOneWidget);
-
-    await widgetTester.enterText(ipAddressField, '10.3.53.2');
-    await widgetTester.testTextInput.receiveAction(TextInputAction.done);
-    await widgetTester.pump();
-
-    expect(preferences.getString(PrefKeys.ipAddress), '10.3.53.2');
-    verify(fakeSettings.changeIPAddress()).called(greaterThanOrEqualTo(1));
-  });
-
-  testWidgets('Change NT server mode', (widgetTester) async {
-    FlutterError.onError = ignoreOverflowErrors;
-
-    await widgetTester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: SettingsDialog(
-            ntConnection: createMockOfflineNT4(),
-            preferences: preferences,
-            onNTTargetServerChanged: (mode) async {
-              fakeSettings.changeNTServerMode();
-
-              await preferences.setInt(PrefKeys.ntTargetServer, mode.index);
-            },
-          ),
-        ),
-      ),
-    );
-
-    await widgetTester.pumpAndSettle();
-
-    final ntServerMode = find.byType(DialogDropdownChooser<NTServerTarget>);
-
-    expect(ntServerMode, findsOneWidget);
-
-    expect(find.text('Robot Code'), findsOneWidget);
-
-    await widgetTester.tap(ntServerMode);
-    await widgetTester.pumpAndSettle();
-
-    expect(find.text('SystemCore Internal'), findsOneWidget);
-
-    await widgetTester.tap(find.text('SystemCore Internal'));
-    await widgetTester.pumpAndSettle();
-
-    expect(find.text('Robot Code'), findsNothing);
-    expect(find.text('SystemCore Internal'), findsOneWidget);
-    expect(
-      preferences.getInt(PrefKeys.ntTargetServer),
-      NTServerTarget.systemCore.index,
-    );
-
-    await widgetTester.tap(find.text('SystemCore Internal'));
-    await widgetTester.pumpAndSettle();
-
-    expect(find.text('Robot Code'), findsOneWidget);
-
-    await widgetTester.tap(find.text('Robot Code'));
-    await widgetTester.pumpAndSettle();
-    expect(
-      preferences.getInt(PrefKeys.ntTargetServer),
-      NTServerTarget.robotCode.index,
-    );
-
-    verify(fakeSettings.changeNTServerMode()).called(2);
-  });
-
-  testWidgets('Change default period', (widgetTester) async {
-    FlutterError.onError = ignoreOverflowErrors;
-
-    await widgetTester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: SettingsDialog(
-            ntConnection: createMockOfflineNT4(),
-            preferences: preferences,
-            onDefaultPeriodChanged: (period) async {
-              fakeSettings.changeDefaultPeriod();
-
-              await preferences.setDouble(
-                PrefKeys.defaultPeriod,
-                double.parse(period!),
-              );
-            },
-          ),
-        ),
-      ),
-    );
-
-    await widgetTester.pumpAndSettle();
-
-    final periodField = find.widgetWithText(DialogTextInput, 'Default Period');
-
-    expect(periodField, findsOneWidget);
-
-    await widgetTester.enterText(periodField, '0.05');
-    await widgetTester.testTextInput.receiveAction(TextInputAction.done);
-    await widgetTester.pumpAndSettle();
-
-    expect(preferences.getDouble(PrefKeys.defaultPeriod), 0.05);
-    verify(fakeSettings.changeDefaultPeriod()).called(greaterThanOrEqualTo(1));
-  });
-
-  testWidgets('Change default graph period', (widgetTester) async {
-    FlutterError.onError = ignoreOverflowErrors;
-
-    await widgetTester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: SettingsDialog(
-            ntConnection: createMockOfflineNT4(),
-            preferences: preferences,
-            onDefaultGraphPeriodChanged: (period) async {
-              fakeSettings.changeDefaultGraphPeriod();
-
-              await preferences.setDouble(
-                PrefKeys.defaultGraphPeriod,
-                double.parse(period!),
-              );
-            },
-          ),
-        ),
-      ),
-    );
-
-    await widgetTester.pumpAndSettle();
-
-    final periodField = find.widgetWithText(
-      DialogTextInput,
-      'Default Graph Period',
-    );
-
-    expect(periodField, findsOneWidget);
-
-    await widgetTester.enterText(periodField, '0.05');
-    await widgetTester.testTextInput.receiveAction(TextInputAction.done);
-    await widgetTester.pumpAndSettle();
-
-    expect(preferences.getDouble(PrefKeys.defaultGraphPeriod), 0.05);
-    verify(
-      fakeSettings.changeDefaultGraphPeriod(),
-    ).called(greaterThanOrEqualTo(1));
-  });
-
   testWidgets('Change team color', (widgetTester) async {
     FlutterError.onError = ignoreOverflowErrors;
 
@@ -431,7 +124,6 @@ void main() {
       MaterialApp(
         home: Scaffold(
           body: SettingsDialog(
-            ntConnection: createMockOnlineNT4(),
             preferences: preferences,
             onColorChanged: (color) async {
               fakeSettings.changeColor();
@@ -495,7 +187,6 @@ void main() {
       MaterialApp(
         home: Scaffold(
           body: SettingsDialog(
-            ntConnection: createMockOfflineNT4(),
             onThemeVariantChanged: (variant) async {
               fakeSettings.changeThemeVariant();
 
@@ -562,7 +253,6 @@ void main() {
       MaterialApp(
         home: Scaffold(
           body: SettingsDialog(
-            ntConnection: createMockOfflineNT4(),
             preferences: preferences,
             onGridToggle: (value) async {
               fakeSettings.changeShowGrid();
@@ -612,7 +302,6 @@ void main() {
       MaterialApp(
         home: Scaffold(
           body: SettingsDialog(
-            ntConnection: createMockOfflineNT4(),
             preferences: preferences,
             onGridSizeChanged: (gridSize) async {
               fakeSettings.changeGridSize();
@@ -644,13 +333,11 @@ void main() {
 
   testWidgets('Change corner radius', (widgetTester) async {
     FlutterError.onError = ignoreOverflowErrors;
-    createMockOfflineNT4();
 
     await widgetTester.pumpWidget(
       MaterialApp(
         home: Scaffold(
           body: SettingsDialog(
-            ntConnection: createMockOfflineNT4(),
             preferences: preferences,
             onCornerRadiusChanged: (radius) async {
               fakeSettings.changeCornerRadius();
@@ -693,7 +380,6 @@ void main() {
       MaterialApp(
         home: Scaffold(
           body: SettingsDialog(
-            ntConnection: createMockOfflineNT4(),
             preferences: preferences,
             onResizeToDSChanged: (value) async {
               fakeSettings.changeDSAutoResize();
@@ -746,7 +432,6 @@ void main() {
       MaterialApp(
         home: Scaffold(
           body: SettingsDialog(
-            ntConnection: createMockOfflineNT4(),
             preferences: preferences,
             onRememberWindowPositionChanged: (value) async {
               fakeSettings.changeRememberWindow();
@@ -800,7 +485,6 @@ void main() {
         home: Scaffold(
           body: SettingsDialog(
             preferences: preferences,
-            ntConnection: createMockOfflineNT4(),
             onLayoutLock: (value) async {
               fakeSettings.changeLockLayout();
 
@@ -845,62 +529,6 @@ void main() {
     verify(fakeSettings.changeLockLayout()).called(2);
   });
 
-  testWidgets('Change auto submit button', (widgetTester) async {
-    FlutterError.onError = ignoreOverflowErrors;
-
-    await widgetTester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: SettingsDialog(
-            preferences: preferences,
-            ntConnection: createMockOfflineNT4(),
-            onAutoSubmitButtonChanged: (value) async {
-              fakeSettings.changeAutoSubmitButton();
-
-              await preferences.setBool(PrefKeys.autoTextSubmitButton, value);
-            },
-          ),
-        ),
-      ),
-    );
-
-    await widgetTester.pumpAndSettle();
-
-    expect(appearanceSettings, findsOneWidget);
-    await widgetTester.tap(appearanceSettings);
-    await widgetTester.pumpAndSettle();
-
-    final autoSubmitButtonSwitch = find.widgetWithText(
-      DialogToggleSwitch,
-      'Auto Show Text Submit Button',
-    );
-
-    expect(autoSubmitButtonSwitch, findsOneWidget);
-
-    // Widget tester.tap will not work for some reason
-    final switchWidget =
-        find
-                .descendant(
-                  of: autoSubmitButtonSwitch,
-                  matching: find.byType(Switch),
-                )
-                .evaluate()
-                .first
-                .widget
-            as Switch;
-
-    switchWidget.onChanged?.call(true);
-    await widgetTester.pumpAndSettle();
-
-    expect(preferences.getBool(PrefKeys.autoTextSubmitButton), true);
-
-    switchWidget.onChanged?.call(false);
-    await widgetTester.pumpAndSettle();
-
-    expect(preferences.getBool(PrefKeys.autoTextSubmitButton), false);
-    verify(fakeSettings.changeAutoSubmitButton()).called(2);
-  });
-
   testWidgets('Change log level', (widgetTester) async {
     FlutterError.onError = ignoreOverflowErrors;
 
@@ -908,7 +536,6 @@ void main() {
       MaterialApp(
         home: Scaffold(
           body: SettingsDialog(
-            ntConnection: createMockOfflineNT4(),
             onLogLevelChanged: (level) async {
               fakeSettings.changeLogLevel();
 
@@ -971,7 +598,6 @@ void main() {
         home: Scaffold(
           body: SettingsDialog(
             preferences: preferences,
-            ntConnection: createMockOfflineNT4(),
             onGridDPIChanged: (value) async {
               fakeSettings.changeGridDPIOverride();
 
@@ -1026,7 +652,6 @@ void main() {
         home: Scaffold(
           body: SettingsDialog(
             preferences: preferences,
-            ntConnection: createMockOfflineNT4(),
             onOpenAssetsFolderPressed: () {
               fakeSettings.openAssetsFolder();
             },

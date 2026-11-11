@@ -3,8 +3,6 @@ import 'dart:ui';
 
 import 'package:collection/collection.dart';
 import 'package:dot_cast/dot_cast.dart';
-import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:material_ui/material_ui.dart';
 
@@ -13,9 +11,8 @@ import 'package:elastic_dashboard/widgets/dialog_widgets/dialog_dropdown_chooser
 import 'package:elastic_dashboard/widgets/dialog_widgets/dialog_text_input.dart';
 import 'package:elastic_dashboard/widgets/draggable_containers/draggable_widget_container.dart';
 import 'package:elastic_dashboard/widgets/draggable_containers/models/layout_container_model.dart';
-import 'package:elastic_dashboard/widgets/draggable_containers/models/nt_widget_container_model.dart';
+import 'package:elastic_dashboard/widgets/draggable_containers/models/ros_widget_container_model.dart';
 import 'package:elastic_dashboard/widgets/draggable_containers/models/widget_container_model.dart';
-import 'package:elastic_dashboard/widgets/nt_widgets/nt_widget.dart';
 
 typedef DragOutFunctions = ({
   bool Function(WidgetContainerModel widget) dragOutEnd,
@@ -27,7 +24,7 @@ class ListLayoutModel extends LayoutContainerModel {
   @override
   String type = 'List Layout';
 
-  List<NTWidgetContainerModel> children = [];
+  List<RosWidgetContainerModel> children = [];
 
   String labelPosition = 'TOP';
 
@@ -35,13 +32,7 @@ class ListLayoutModel extends LayoutContainerModel {
   static const double _minHeight = 128 * 2;
 
   final DragOutFunctions? dragOutFunctions;
-  final NTWidgetContainerModel? Function(
-    SharedPreferences preferences,
-    Map<String, dynamic> jsonData,
-    bool enabled, {
-    Function(String errorMessage)? onJsonLoadingWarning,
-  })?
-  ntWidgetBuilder;
+  final RosWidgetContainerModel? Function(Map<String, dynamic>)? widgetBuilder;
 
   final Function(WidgetContainerModel model)? onDragCancel;
 
@@ -59,8 +50,8 @@ class ListLayoutModel extends LayoutContainerModel {
     required super.title,
     this.dragOutFunctions,
     required this.onDragCancel,
-    this.ntWidgetBuilder,
-    List<NTWidgetContainerModel>? children,
+    this.widgetBuilder,
+    List<RosWidgetContainerModel>? children,
     super.minWidth = _minWidth,
     super.minHeight = _minHeight,
     this.labelPosition = 'TOP',
@@ -73,7 +64,7 @@ class ListLayoutModel extends LayoutContainerModel {
   ListLayoutModel.fromJson({
     required super.jsonData,
     required super.preferences,
-    required this.ntWidgetBuilder,
+    required this.widgetBuilder,
     this.dragOutFunctions,
     required this.onDragCancel,
     super.enabled,
@@ -133,17 +124,10 @@ class ListLayoutModel extends LayoutContainerModel {
       return;
     }
 
-    for (Map<String, dynamic> childData in jsonData['children']) {
-      NTWidgetContainerModel? widgetModel = ntWidgetBuilder!(
-        preferences,
-        childData,
-        enabled,
-        onJsonLoadingWarning: onJsonLoadingWarning,
-      );
-
-      if (widgetModel != null) {
-        children.add(widgetModel);
-      }
+    for (final childData in jsonData['children']) {
+      if (childData is! Map<String, dynamic>) continue;
+      final widgetModel = widgetBuilder?.call(childData);
+      if (widgetModel != null) children.add(widgetModel);
     }
   }
 
@@ -225,7 +209,9 @@ class ListLayoutModel extends LayoutContainerModel {
                               padding: EdgeInsets.zero,
                               child: ExpansionTile(
                                 title: Text(container.title ?? ''),
-                                subtitle: Text(container.childModel.type),
+                                subtitle: const Text(
+                                  RosWidgetContainerModel.type,
+                                ),
                                 controlAffinity:
                                     ListTileControlAffinity.leading,
                                 trailing: IconButton(
@@ -297,7 +283,7 @@ class ListLayoutModel extends LayoutContainerModel {
 
   List<Widget> getChildEditProperties(
     BuildContext context,
-    NTWidgetContainerModel container,
+    RosWidgetContainerModel container,
     StateSetter setState,
   ) {
     List<Widget> containerEditProperties = [
@@ -317,31 +303,12 @@ class ListLayoutModel extends LayoutContainerModel {
       ),
     ];
 
-    List<Widget> childEditProperties = container.childModel.getEditProperties(
-      context,
-    );
-
-    return [
-      ...containerEditProperties,
-      container.getWidgetTypeProperties((fn) {
-        setState(fn);
-        notifyListeners();
-      }),
-      if (childEditProperties.isNotEmpty) ...[
-        const Divider(),
-        Text('${container.childModel.type} Widget Settings'),
-        const SizedBox(height: 5),
-        ...childEditProperties,
-      ],
-      const Divider(),
-      ...container.getNTEditProperties(),
-      const SizedBox(height: 5),
-    ];
+    return containerEditProperties;
   }
 
   @override
   void addWidget(WidgetContainerModel widget) {
-    children.add(widget as NTWidgetContainerModel);
+    children.add(widget as RosWidgetContainerModel);
     notifyListeners();
   }
 
@@ -355,12 +322,12 @@ class ListLayoutModel extends LayoutContainerModel {
   bool willAcceptWidget(
     WidgetContainerModel widget, {
     Offset? globalPosition,
-  }) => widget is NTWidgetContainerModel;
+  }) => widget is RosWidgetContainerModel;
 
   List<Widget> _getListColumn() {
     List<Widget> column = [];
 
-    for (NTWidgetContainerModel widget in children) {
+    for (RosWidgetContainerModel widget in children) {
       Widget widgetInContainer = Container(
         constraints: BoxConstraints(
           minHeight: 32.0,
@@ -377,10 +344,7 @@ class ListLayoutModel extends LayoutContainerModel {
                 ),
                 child: AbsorbPointer(
                   absorbing: !widget.enabled,
-                  child: ChangeNotifierProvider<NTWidgetModel>.value(
-                    value: widget.childModel,
-                    child: widget.child,
-                  ),
+                  child: widget.child,
                 ),
               ),
             ),

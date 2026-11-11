@@ -11,8 +11,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:material_ui/material_ui.dart';
 
-import 'package:elastic_dashboard/services/ip_address_util.dart';
-import 'package:elastic_dashboard/services/nt_connection.dart';
 import 'package:elastic_dashboard/services/settings.dart';
 import 'package:elastic_dashboard/services/text_formatter_builder.dart';
 import 'package:elastic_dashboard/widgets/dialog_widgets/dialog_color_picker.dart';
@@ -21,8 +19,6 @@ import 'package:elastic_dashboard/widgets/dialog_widgets/dialog_text_input.dart'
 import 'package:elastic_dashboard/widgets/dialog_widgets/dialog_toggle_switch.dart';
 
 class SettingsDialog extends StatefulWidget {
-  final NTConnection ntConnection;
-
   static final List<String> themeVariants =
       FlexSchemeVariant.values
           .whereNot((variant) => variant == Defaults.themeVariant)
@@ -40,10 +36,6 @@ class SettingsDialog extends StatefulWidget {
 
   final SharedPreferences preferences;
 
-  final FutureOr<void> Function(String? data)? onIPAddressChanged;
-  final FutureOr<void> Function(String? data)? onTeamNumberChanged;
-  final void Function(IPAddressMode mode)? onIPAddressModeChanged;
-  final FutureOr<void> Function(NTServerTarget mode)? onNTTargetServerChanged;
   final void Function(Color color)? onColorChanged;
   final void Function(bool value)? onGridToggle;
   final FutureOr<void> Function(String? gridSize)? onGridSizeChanged;
@@ -51,22 +43,14 @@ class SettingsDialog extends StatefulWidget {
   final void Function(bool value)? onResizeToDSChanged;
   final void Function(bool value)? onRememberWindowPositionChanged;
   final void Function(bool value)? onLayoutLock;
-  final FutureOr<void> Function(String? value)? onDefaultPeriodChanged;
-  final FutureOr<void> Function(String? value)? onDefaultGraphPeriodChanged;
   final void Function(FlexSchemeVariant variant)? onThemeVariantChanged;
   final void Function(Level? level)? onLogLevelChanged;
   final FutureOr<void> Function(String? value)? onGridDPIChanged;
   final void Function()? onOpenAssetsFolderPressed;
-  final FutureOr<void> Function(bool value)? onAutoSubmitButtonChanged;
 
   const SettingsDialog({
     super.key,
-    required this.ntConnection,
     required this.preferences,
-    this.onTeamNumberChanged,
-    this.onIPAddressModeChanged,
-    this.onNTTargetServerChanged,
-    this.onIPAddressChanged,
     this.onColorChanged,
     this.onGridToggle,
     this.onGridSizeChanged,
@@ -74,13 +58,10 @@ class SettingsDialog extends StatefulWidget {
     this.onResizeToDSChanged,
     this.onRememberWindowPositionChanged,
     this.onLayoutLock,
-    this.onDefaultPeriodChanged,
-    this.onDefaultGraphPeriodChanged,
     this.onThemeVariantChanged,
     this.onLogLevelChanged,
     this.onGridDPIChanged,
     this.onOpenAssetsFolderPressed,
-    this.onAutoSubmitButtonChanged,
   });
 
   @override
@@ -93,7 +74,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
     title: const Text('Settings'),
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15.0)),
     content: DefaultTabController(
-      length: 3,
+      length: 2,
       child: SizedBox(
         width: 450,
         height: 400,
@@ -101,7 +82,6 @@ class _SettingsDialogState extends State<SettingsDialog> {
           children: [
             const TabBar(
               tabs: [
-                Tab(icon: Icon(Icons.wifi_outlined), child: Text('Network')),
                 Tab(
                   icon: Icon(Icons.color_lens_outlined),
                   child: Text('Appearance'),
@@ -119,23 +99,6 @@ class _SettingsDialogState extends State<SettingsDialog> {
             Expanded(
               child: TabBarView(
                 children: [
-                  // Network Tab
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                    child: SingleChildScrollView(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxHeight: 320),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          children: [
-                            ..._ipAddressSettings(),
-                            const Divider(),
-                            ..._networkTablesSettings(),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
                   // Style Preferences Tab
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 4.0),
@@ -150,8 +113,6 @@ class _SettingsDialogState extends State<SettingsDialog> {
                             ..._themeSettings(),
                             const Divider(),
                             ..._gridSettings(),
-                            const Divider(),
-                            ..._otherSettings(),
                           ],
                         ),
                       ),
@@ -276,82 +237,6 @@ class _SettingsDialogState extends State<SettingsDialog> {
     ];
   }
 
-  List<Widget> _ipAddressSettings() => [
-    const Align(
-      alignment: Alignment.topLeft,
-      child: Text('Connection Settings'),
-    ),
-    const SizedBox(height: 5),
-    Row(
-      children: [
-        Flexible(
-          flex: 2,
-          child: DialogTextInput(
-            initialText:
-                widget.preferences.getInt(PrefKeys.teamNumber)?.toString() ??
-                '',
-            label: 'Team Number',
-            onSubmit: (data) async {
-              await widget.onTeamNumberChanged?.call(data);
-              setState(() {});
-            },
-            formatter: FilteringTextInputFormatter.digitsOnly,
-          ),
-        ),
-        Flexible(
-          flex: 3,
-          child: ValueListenableBuilder(
-            valueListenable: widget.ntConnection.dsConnected,
-            builder: (context, connected, child) {
-              int addressModeID =
-                  widget.preferences.getInt(PrefKeys.ipAddressMode) ??
-                  Defaults.ipAddressMode.id;
-              bool canEditIP =
-                  addressModeID == IPAddressMode.custom.id ||
-                  (addressModeID == IPAddressMode.driverStation.id &&
-                      !connected);
-              return DialogTextInput(
-                enabled: canEditIP,
-                initialText:
-                    widget.preferences.getString(PrefKeys.ipAddress) ??
-                    Defaults.ipAddress,
-                label: 'IP Address',
-                onSubmit: (String? data) async {
-                  await widget.onIPAddressChanged?.call(data);
-                  setState(() {});
-                },
-              );
-            },
-          ),
-        ),
-      ],
-    ),
-    const SizedBox(height: 5),
-    Row(
-      children: [
-        const Text('IP Address Mode'),
-        const SizedBox(width: 5),
-        Flexible(
-          child: DialogDropdownChooser<IPAddressMode>(
-            onSelectionChanged: (mode) {
-              if (mode == null) {
-                return;
-              }
-
-              widget.onIPAddressModeChanged?.call(mode);
-
-              setState(() {});
-            },
-            choices: IPAddressMode.values,
-            initialValue: IPAddressMode.fromID(
-              widget.preferences.getInt(PrefKeys.ipAddressMode),
-            ),
-          ),
-        ),
-      ],
-    ),
-  ];
-
   List<Widget> _gridSettings() => [
     const Align(alignment: Alignment.topLeft, child: Text('Grid Settings')),
     const SizedBox(height: 5),
@@ -438,108 +323,6 @@ class _SettingsDialogState extends State<SettingsDialog> {
         ],
       ),
     ],
-  ];
-
-  List<Widget> _otherSettings() => [
-    const Align(alignment: Alignment.topLeft, child: Text('Other Settings')),
-    const SizedBox(height: 5),
-    Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: [
-        Flexible(
-          child: DialogToggleSwitch(
-            initialValue: false,
-            label: 'Auto Show Text Submit Button',
-            onToggle: (value) async {
-              await widget.onAutoSubmitButtonChanged?.call(value);
-              setState(() {});
-            },
-          ),
-        ),
-      ],
-    ),
-  ];
-
-  List<Widget> _networkTablesSettings() => [
-    const Align(
-      alignment: Alignment.topLeft,
-      child: Text('Network Tables Settings'),
-    ),
-    const SizedBox(height: 5),
-    Row(
-      children: [
-        Tooltip(
-          waitDuration: const Duration(milliseconds: 100),
-          message: '''
-There are 2 Network Tables servers on the SystemCore:
-
-Robot Code - The Network Tables server displaying data from the robot code.
-SystemCore Internal - The Network Tables server displaying internal data from the SystemCore (RAM, CPU, etc).''',
-          child: Icon(Icons.help_outline),
-        ),
-        const SizedBox(width: 5),
-        const Text('Target Server'),
-        const SizedBox(width: 5),
-        Flexible(
-          child: DialogDropdownChooser<NTServerTarget>(
-            onSelectionChanged: (mode) async {
-              if (mode == null) {
-                return;
-              }
-
-              await widget.onNTTargetServerChanged?.call(mode);
-
-              setState(() {});
-            },
-            choices: NTServerTarget.values,
-            initialValue:
-                NTServerTarget.fromIndex(
-                  widget.preferences.getInt(PrefKeys.ntTargetServer),
-                ) ??
-                Defaults.targetServer,
-            nameMap: (e) => e.name,
-          ),
-        ),
-      ],
-    ),
-    const SizedBox(height: 5),
-    Flexible(
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          Flexible(
-            child: DialogTextInput(
-              initialText:
-                  (widget.preferences.getDouble(PrefKeys.defaultPeriod) ??
-                          Defaults.defaultPeriod)
-                      .toString(),
-              label: 'Default Period',
-              onSubmit: (value) async {
-                await widget.onDefaultPeriodChanged?.call(value);
-                setState(() {});
-              },
-              formatter: TextFormatterBuilder.decimalTextFormatter(),
-            ),
-          ),
-          Flexible(
-            child: DialogTextInput(
-              initialText:
-                  (widget.preferences.getDouble(
-                            PrefKeys.defaultGraphPeriod,
-                          ) ??
-                          Defaults.defaultGraphPeriod)
-                      .toString(),
-              label: 'Default Graph Period',
-              onSubmit: (value) async {
-                widget.onDefaultGraphPeriodChanged?.call(value);
-                setState(() {});
-              },
-              formatter: TextFormatterBuilder.decimalTextFormatter(),
-            ),
-          ),
-        ],
-      ),
-    ),
   ];
 
   List<Widget> _advancedSettings() {

@@ -7,9 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'package:elastic_dashboard/pages/dashboard_page.dart';
-import 'package:elastic_dashboard/services/ip_address_util.dart';
 import 'package:elastic_dashboard/services/log.dart';
-import 'package:elastic_dashboard/services/nt_connection.dart';
 import 'package:elastic_dashboard/services/settings.dart';
 import 'package:elastic_dashboard/widgets/settings_dialog.dart';
 import 'package:elastic_dashboard/widgets/tab_grid.dart';
@@ -20,38 +18,17 @@ mixin DashboardPageSettings on DashboardPageViewModel {
     showDialog(
       context: context,
       builder: (context) => SettingsDialog(
-        ntConnection: ntConnection,
         preferences: preferences,
-        onTeamNumberChanged: changeTeamNumber,
-        onIPAddressModeChanged: (mode) async {
-          if (mode.id == preferences.getInt(PrefKeys.ipAddressMode)) {
-            return;
-          }
-
-          changeIPAddressMode(mode);
-        },
-        onIPAddressChanged: (String? data) async {
-          if (data == null ||
-              data == preferences.getString(PrefKeys.ipAddress)) {
-            return;
-          }
-
-          updateIPAddress(data);
-        },
-        onNTTargetServerChanged: changeNTTargetServer,
         onGridToggle: toggleGrid,
         onGridSizeChanged: changeGridSize,
         onCornerRadiusChanged: changeCornerRadius,
         onResizeToDSChanged: changeResizeToDS,
         onRememberWindowPositionChanged: changeRememberWindowPosition,
         onLayoutLock: changeLayoutLock,
-        onDefaultPeriodChanged: changeDefaultPeriod,
-        onDefaultGraphPeriodChanged: changeDefaultGraphPeriod,
         onColorChanged: onColorChanged,
         onThemeVariantChanged: onThemeVariantChanged,
         onLogLevelChanged: changeLogLevel,
         onGridDPIChanged: changeGridDPI,
-        onAutoSubmitButtonChanged: changeAutoSubmitButton,
         onOpenAssetsFolderPressed: () async {
           Uri uri = Uri.file(
             '${path.dirname(Platform.resolvedExecutable)}/data/flutter_assets/assets/',
@@ -63,30 +40,6 @@ mixin DashboardPageSettings on DashboardPageViewModel {
         },
       ),
     );
-  }
-
-  Future<void> changeTeamNumber(String? data) async {
-    if (data == null) {
-      return;
-    }
-
-    int? newTeamNumber = int.tryParse(data);
-
-    if (newTeamNumber == null ||
-        (newTeamNumber == preferences.getInt(PrefKeys.teamNumber))) {
-      return;
-    }
-
-    await preferences.setInt(PrefKeys.teamNumber, newTeamNumber);
-
-    switch (IPAddressMode.fromID(preferences.getInt(PrefKeys.ipAddressMode))) {
-      case IPAddressMode.teamNumber:
-        updateIPAddress(IPAddressUtil.teamNumberToIP(newTeamNumber));
-        break;
-      default:
-        notifyListeners();
-        break;
-    }
   }
 
   Future<void> toggleGrid(bool value) async {
@@ -188,13 +141,8 @@ mixin DashboardPageSettings on DashboardPageViewModel {
   }
 
   Future<void> changeResizeToDS(bool value) async {
-    if (value && ntConnection.dsHeight.value != null) {
-      onDriverStationDocked(ntConnection.dsHeight.value!);
-    } else {
-      onDriverStationUndocked();
-    }
-
     await preferences.setBool(PrefKeys.autoResizeToDS, value);
+    updateDriverStationResize(value);
     notifyListeners();
   }
 
@@ -208,38 +156,6 @@ mixin DashboardPageSettings on DashboardPageViewModel {
     } else {
       unlockLayout();
     }
-    notifyListeners();
-  }
-
-  Future<void> changeDefaultPeriod(String? value) async {
-    if (value == null) {
-      return;
-    }
-    double? newPeriod = double.tryParse(value);
-
-    if (newPeriod == null ||
-        newPeriod == preferences.getDouble(PrefKeys.defaultPeriod)) {
-      return;
-    }
-
-    await preferences.setDouble(PrefKeys.defaultPeriod, newPeriod);
-
-    notifyListeners();
-  }
-
-  Future<void> changeDefaultGraphPeriod(String? value) async {
-    if (value == null) {
-      return;
-    }
-    double? newPeriod = double.tryParse(value);
-
-    if (newPeriod == null ||
-        newPeriod == preferences.getDouble(PrefKeys.defaultGraphPeriod)) {
-      return;
-    }
-
-    await preferences.setDouble(PrefKeys.defaultGraphPeriod, newPeriod);
-
     notifyListeners();
   }
 
@@ -273,68 +189,6 @@ mixin DashboardPageSettings on DashboardPageViewModel {
       logger.info('Removing DPI override preference');
       await preferences.remove(PrefKeys.gridDpiOverride);
     }
-    notifyListeners();
-  }
-
-  Future<void> changeAutoSubmitButton(bool value) async {
-    await preferences.setBool(PrefKeys.autoTextSubmitButton, value);
-    notifyListeners();
-  }
-
-  @override
-  Future<void> changeIPAddressMode(IPAddressMode mode) async {
-    await preferences.setInt(PrefKeys.ipAddressMode, mode.id);
-    switch (mode) {
-      case IPAddressMode.driverStation:
-        String? lastAnnouncedIP = ntConnection.dsIpAddress.value;
-
-        if (lastAnnouncedIP == null) {
-          break;
-        }
-
-        updateIPAddress(lastAnnouncedIP);
-        break;
-      case IPAddressMode.teamNumber:
-        updateIPAddress(
-          IPAddressUtil.teamNumberToIP(
-            preferences.getInt(PrefKeys.teamNumber) ?? Defaults.teamNumber,
-          ),
-        );
-        break;
-      case IPAddressMode.systemCoremDNS:
-        updateIPAddress('robot.local');
-        break;
-      case IPAddressMode.systemCoreAP:
-        updateIPAddress('172.30.0.1');
-        break;
-      case IPAddressMode.localhost:
-        updateIPAddress('localhost');
-        break;
-      default:
-        notifyListeners();
-        break;
-    }
-  }
-
-  @override
-  Future<void> changeNTTargetServer(NTServerTarget mode) async {
-    if (mode.index == preferences.getInt(PrefKeys.ntTargetServer)) {
-      return;
-    }
-    await preferences.setInt(PrefKeys.ntTargetServer, mode.index);
-
-    ntConnection.changeServerMode(mode);
-    notifyListeners();
-  }
-
-  @override
-  Future<void> updateIPAddress(String newIPAddress) async {
-    if (newIPAddress == preferences.getString(PrefKeys.ipAddress)) {
-      return;
-    }
-    await preferences.setString(PrefKeys.ipAddress, newIPAddress);
-
-    ntConnection.changeIPAddress(newIPAddress);
     notifyListeners();
   }
 }

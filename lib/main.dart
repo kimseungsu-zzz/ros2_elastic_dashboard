@@ -16,10 +16,7 @@ import 'package:material_ui/material_ui.dart';
 
 import 'package:elastic_dashboard/pages/dashboard_page.dart';
 import 'package:elastic_dashboard/services/app_distributor.dart';
-import 'package:elastic_dashboard/services/field_images.dart';
 import 'package:elastic_dashboard/services/log.dart';
-import 'package:elastic_dashboard/services/nt_connection.dart';
-import 'package:elastic_dashboard/services/nt_widget_registry.dart';
 import 'package:elastic_dashboard/services/settings.dart';
 
 import 'package:path_provider/path_provider.dart'
@@ -78,32 +75,13 @@ void main() async {
       Defaults.logLevel;
   Logger.level = logLevel;
 
-  NTWidgetRegistry.ensureInitialized();
-
-  String ipAddress =
-      preferences.getString(PrefKeys.ipAddress) ?? Defaults.ipAddress;
-
-  NTServerTarget serverMode =
-      NTServerTarget.fromIndex(preferences.getInt(PrefKeys.ntTargetServer)) ??
-      Defaults.targetServer;
-
-  NTConnection ntConnection = NTConnection(ipAddress, serverMode);
-
   LicenseRegistry.addLicense(() async* {
     final robotoLicense = await rootBundle.loadString(
       'assets/third_party_licenses/OFL.txt',
     );
     yield LicenseEntryWithLineBreaks(['google_fonts'], robotoLicense);
-
-    final advantageScopeLicense = await rootBundle.loadString(
-      'assets/third_party_licenses/AdvantageScopeAssets.txt',
-    );
-    yield LicenseEntryWithLineBreaks([
-      'advantagescope_assets',
-    ], advantageScopeLicense);
   });
 
-  await FieldImages.loadFields('assets/fields/');
   if (!kIsWeb) {
     Display primaryDisplay = await screenRetriever.getPrimaryDisplay();
     Size screenSize = primaryDisplay.visibleSize ?? primaryDisplay.size;
@@ -143,7 +121,6 @@ void main() async {
 
   runApp(
     Elastic(
-      ntConnection: ntConnection,
       preferences: preferences,
       version: packageInfo.version,
     ),
@@ -232,13 +209,11 @@ Future<void> _restorePreferencesFromBackup(String appFolderPath) async {
 }
 
 class Elastic extends StatefulWidget {
-  final NTConnection ntConnection;
   final SharedPreferences preferences;
   final String version;
 
   const Elastic({
     super.key,
-    required this.ntConnection,
     required this.preferences,
     required this.version,
   });
@@ -262,7 +237,6 @@ class _ElasticState extends State<Elastic> {
 
   late final DashboardPageViewModel dashboardViewModel =
       DashboardPageViewModelImpl(
-        ntConnection: widget.ntConnection,
         preferences: widget.preferences,
         version: widget.version,
         onColorChanged: (color) => setState(() {
@@ -285,6 +259,12 @@ class _ElasticState extends State<Elastic> {
           setState(() {});
         },
       );
+
+  @override
+  void dispose() {
+    dashboardViewModel.dispose();
+    super.dispose();
+  }
 
   FlexTones get themeTones => themeVariant.tones(Brightness.dark);
 

@@ -6,7 +6,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'package:elastic_dashboard/main.dart';
-import 'package:elastic_dashboard/services/field_images.dart';
 import 'package:elastic_dashboard/services/settings.dart';
 
 import 'test_util.dart';
@@ -16,8 +15,6 @@ void main() {
 
   testWidgets('Full app test', (widgetTester) async {
     FlutterError.onError = ignoreOverflowErrors;
-
-    await FieldImages.loadFields('assets/fields/');
 
     String filePath =
         '${Directory.current.path}/test_resources/test-layout.json';
@@ -30,7 +27,6 @@ void main() {
 
     await widgetTester.pumpWidget(
       Elastic(
-        ntConnection: createMockOfflineNT4(),
         preferences: preferences,
         version: '0.0.0.0',
       ),

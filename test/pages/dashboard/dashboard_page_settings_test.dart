@@ -6,12 +6,7 @@ import 'package:material_ui/material_ui.dart';
 
 import 'package:elastic_dashboard/pages/dashboard/dashboard_page_settings.dart';
 import 'package:elastic_dashboard/pages/dashboard_page.dart';
-import 'package:elastic_dashboard/services/ip_address_util.dart';
-import 'package:elastic_dashboard/services/nt_connection.dart';
 import 'package:elastic_dashboard/services/settings.dart';
-
-import '../../test_util.dart';
-import '../../test_util.mocks.dart';
 
 class SettingsDashboardViewModel = DashboardPageViewModel
     with DashboardPageSettings;
@@ -23,100 +18,13 @@ void main() {
   late SettingsDashboardViewModel dashboardModel;
 
   setUp(() async {
-    SharedPreferences.setMockInitialValues({
-      PrefKeys.teamNumber: 353,
-      PrefKeys.ipAddress: '10.3.53.2',
-    });
+    SharedPreferences.setMockInitialValues({});
 
     preferences = await SharedPreferences.getInstance();
 
     dashboardModel = SettingsDashboardViewModel(
-      ntConnection: createMockOfflineNT4(),
       preferences: preferences,
       version: '0.0.0.0',
-    );
-  });
-
-  group('[Team Number]:', () {
-    test('Changing with null data does nothing', () async {
-      await dashboardModel.changeTeamNumber(null);
-
-      expect(preferences.getInt(PrefKeys.teamNumber), 353);
-    });
-    test('Changing with valid data', () async {
-      await dashboardModel.changeTeamNumber('2053');
-
-      expect(preferences.getInt(PrefKeys.teamNumber), 2053);
-    });
-    group('Changing with IP address mode:', () {
-      test('Driver station', () async {
-        await preferences.setInt(
-          PrefKeys.ipAddressMode,
-          IPAddressMode.driverStation.id,
-        );
-        await dashboardModel.changeTeamNumber('2053');
-        // If driver station is disconnect, it does not change from the team number
-        expect(preferences.getString(PrefKeys.ipAddress), '10.3.53.2');
-      });
-      test('Team number', () async {
-        await preferences.setInt(
-          PrefKeys.ipAddressMode,
-          IPAddressMode.teamNumber.id,
-        );
-        await dashboardModel.changeTeamNumber('2053');
-        expect(preferences.getString(PrefKeys.ipAddress), '10.20.53.2');
-      });
-    });
-  });
-
-  group('[IP Address Mode]:', () {
-    group('Changing IP address mode to', () {
-      setUp(() async {
-        await preferences.setString(PrefKeys.ipAddress, '10.3.53.2');
-
-        MockNTConnection mockConnection = createMockOfflineNT4();
-
-        dashboardModel = SettingsDashboardViewModel(
-          ntConnection: mockConnection,
-          preferences: preferences,
-          version: '0.0.0.0',
-        );
-      });
-      test('Driver Station', () async {
-        await dashboardModel.changeIPAddressMode(IPAddressMode.driverStation);
-
-        expect(preferences.getString(PrefKeys.ipAddress), '10.3.53.2');
-      });
-      test('SystemCore Wifi', () async {
-        await dashboardModel.changeIPAddressMode(IPAddressMode.systemCoreAP);
-
-        expect(preferences.getString(PrefKeys.ipAddress), '172.30.0.1');
-      });
-      test('SystemCore mDNS', () async {
-        await dashboardModel.changeIPAddressMode(IPAddressMode.systemCoremDNS);
-
-        expect(preferences.getString(PrefKeys.ipAddress), 'robot.local');
-      });
-    });
-  });
-
-  test('NT Target Server', () async {
-    await preferences.setInt(
-      PrefKeys.ntTargetServer,
-      NTServerTarget.robotCode.index,
-    );
-    await dashboardModel.changeNTTargetServer(NTServerTarget.robotCode);
-
-    expect(
-      preferences.getInt(PrefKeys.ntTargetServer),
-      NTServerTarget.robotCode.index,
-    );
-
-    await dashboardModel.changeNTTargetServer(NTServerTarget.systemCore);
-
-    expect(
-      preferences.getInt(PrefKeys.ntTargetServer),
-      NTServerTarget.systemCore.index,
     );
   });
 
@@ -197,38 +105,6 @@ void main() {
     test('Changing with valid data', () async {
       await dashboardModel.changeCornerRadius('10');
       expect(preferences.getDouble(PrefKeys.cornerRadius), 10);
-    });
-  });
-
-  group('[Default Period]:', () {
-    setUp(() async {
-      await preferences.setDouble(PrefKeys.defaultPeriod, 0.1);
-    });
-
-    test('Changing with null data does nothing', () async {
-      await dashboardModel.changeDefaultPeriod(null);
-      expect(preferences.getDouble(PrefKeys.defaultPeriod), 0.1);
-    });
-
-    test('Changing with valid data', () async {
-      await dashboardModel.changeDefaultPeriod('0.25');
-      expect(preferences.getDouble(PrefKeys.defaultPeriod), 0.25);
-    });
-  });
-
-  group('[Default Graph Period]:', () {
-    setUp(() async {
-      await preferences.setDouble(PrefKeys.defaultGraphPeriod, 0.1);
-    });
-
-    test('Changing with null data does nothing', () async {
-      await dashboardModel.changeDefaultGraphPeriod(null);
-      expect(preferences.getDouble(PrefKeys.defaultGraphPeriod), 0.1);
-    });
-
-    test('Changing with valid data', () async {
-      await dashboardModel.changeDefaultGraphPeriod('0.25');
-      expect(preferences.getDouble(PrefKeys.defaultGraphPeriod), 0.25);
     });
   });
 

@@ -225,14 +225,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.7.11"
-  decimal:
-    dependency: "direct main"
-    description:
-      name: decimal
-      sha256: fc706a5618b81e5b367b01dd62621def37abc096f2b46a9bd9068b64c1fa36d0
-      url: "https://pub.dev"
-    source: hosted
-    version: "3.2.4"
   dot_cast:
     dependency: "direct main"
     description:
@@ -257,14 +249,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.5.1"
-  equatable:
-    dependency: transitive
-    description:
-      name: equatable
-      sha256: "3e0141505477fd8ad55d6eb4e7776d3fe8430be8e497ccb1521370c3f21a3e2b"
-      url: "https://pub.dev"
-    source: hosted
-    version: "2.0.8"
   fake_async:
     dependency: transitive
     description:
@@ -361,14 +345,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.1.1"
-  fl_chart:
-    dependency: "direct main"
-    description:
-      name: fl_chart
-      sha256: "7ca9a40f4eb85949190e54087be8b4d6ac09dc4c54238d782a34cf1f7c011de9"
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.1.1"
   flex_seed_scheme:
     dependency: "direct main"
     description:
@@ -406,14 +382,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.4.2"
-  flutter_fancy_tree_view:
-    dependency: "direct main"
-    description:
-      name: flutter_fancy_tree_view
-      sha256: e8ef261170be1d63fe56843baa2b501fc353196eadef51d848e882d8cbe10c31
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.6.0"
   flutter_launcher_icons:
     dependency: "direct main"
     description:
@@ -461,15 +429,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.5.2"
-  geekyants_flutter_gauges:
-    dependency: "direct main"
-    description:
-      path: "."
-      ref: elastic-version
-      resolved-ref: "141b95f6dd606204d47134107c1ddc2bbe4879cb"
-      url: "https://github.com/Gold872/GaugesFlutter.git"
-    source: git
-    version: "1.0.4"
   github:
     dependency: "direct main"
     description:
@@ -662,15 +621,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "5.5.1"
-  msgpack_dart:
-    dependency: "direct main"
-    description:
-      path: "."
-      ref: fix-64-bit-ints
-      resolved-ref: "5f158a86c65ee2735e5bf3f9c9e746bad5081d97"
-      url: "https://github.com/TheTripleV/msgpack_dart.git"
-    source: git
-    version: "1.0.1"
   nested:
     dependency: transitive
     description:
@@ -775,14 +725,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.3.0"
-  patterns_canvas:
-    dependency: "direct main"
-    description:
-      name: patterns_canvas
-      sha256: f839fcc2b365a16c8391f488cb3ef9c78c565fe590664ce29f68fc4cf54f90b8
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.5.0"
   petitparser:
     dependency: transitive
     description:
@@ -815,14 +757,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.5.2"
-  popover:
-    dependency: "direct main"
-    description:
-      name: popover
-      sha256: "0bad70fe7dd7b182b8358719c1d50092a54f010e612fee1380c7f2302c6d3d3b"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.5.1"
   posix:
     dependency: transitive
     description:
@@ -855,14 +789,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.5.0"
-  rational:
-    dependency: transitive
-    description:
-      name: rational
-      sha256: cb808fb6f1a839e6fc5f7d8cb3b0a10e1db48b3be102de73938c627f0b636336
-      url: "https://pub.dev"
-    source: hosted
-    version: "2.2.3"
   screen_retriever:
     dependency: "direct main"
     description:
@@ -903,15 +829,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.2.2"
-  searchable_listview:
-    dependency: "direct main"
-    description:
-      path: "."
-      ref: "1250b99e09b56c9b399eb0fa6fd70afd7364bcf3"
-      resolved-ref: "1250b99e09b56c9b399eb0fa6fd70afd7364bcf3"
-      url: "https://github.com/koukibadr/Searchable-Listview.git"
-    source: git
-    version: "2.19.5"
   shared_preferences:
     dependency: "direct main"
     description:
@@ -1174,7 +1091,7 @@ packages:
     source: hosted
     version: "4.5.2"
   vector_math:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: vector_math
       sha256: f36f9f3be64c6198714492bb455c11056e33e2f85d9a0b676a48301e44fdcf47

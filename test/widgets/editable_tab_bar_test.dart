@@ -10,9 +10,9 @@ import 'package:elastic_dashboard/util/tab_data.dart';
 import 'package:elastic_dashboard/widgets/dialog_widgets/dialog_text_input.dart';
 import 'package:elastic_dashboard/widgets/editable_tab_bar.dart';
 import 'package:elastic_dashboard/widgets/tab_grid.dart';
+import 'package:elastic_dashboard/services/ros_viewer.dart';
 
 import '../test_util.dart';
-import '../test_util.mocks.dart';
 
 class FakeTabBarFunctions extends Mock {
   void onTabCreate();
@@ -32,14 +32,13 @@ class FakeTabBarFunctions extends Mock {
 
 void main() {
   late FakeTabBarFunctions tabBarFunctions;
-  late MockNTConnection mockNTConnection;
+  final rosViewer = RosViewer();
   late SharedPreferences preferences;
 
   setUp(() async {
     tabBarFunctions = FakeTabBarFunctions();
     SharedPreferences.setMockInitialValues({});
     preferences = await SharedPreferences.getInstance();
-    mockNTConnection = createMockOfflineNT4();
   });
 
   testWidgets('Editable tab bar', (widgetTester) async {
@@ -55,7 +54,7 @@ void main() {
               TabData(
                 name: 'Teleoperated',
                 tabGrid: TabGridModel(
-                  ntConnection: mockNTConnection,
+                  rosViewer: rosViewer,
                   preferences: preferences,
                   onAddWidgetPressed: () {},
                 ),
@@ -63,7 +62,7 @@ void main() {
               TabData(
                 name: 'Autonomous',
                 tabGrid: TabGridModel(
-                  ntConnection: mockNTConnection,
+                  rosViewer: rosViewer,
                   preferences: preferences,
                   onAddWidgetPressed: () {},
                 ),
@@ -111,7 +110,7 @@ void main() {
               TabData(
                 name: 'Teleoperated',
                 tabGrid: TabGridModel(
-                  ntConnection: mockNTConnection,
+                  rosViewer: rosViewer,
                   preferences: preferences,
                   onAddWidgetPressed: () {},
                 ),
@@ -119,7 +118,7 @@ void main() {
               TabData(
                 name: 'Autonomous',
                 tabGrid: TabGridModel(
-                  ntConnection: mockNTConnection,
+                  rosViewer: rosViewer,
                   preferences: preferences,
                   onAddWidgetPressed: () {},
                 ),
@@ -176,7 +175,7 @@ void main() {
               TabData(
                 name: 'Teleoperated',
                 tabGrid: TabGridModel(
-                  ntConnection: mockNTConnection,
+                  rosViewer: rosViewer,
                   preferences: preferences,
                   onAddWidgetPressed: () {},
                 ),
@@ -184,7 +183,7 @@ void main() {
               TabData(
                 name: 'Autonomous',
                 tabGrid: TabGridModel(
-                  ntConnection: mockNTConnection,
+                  rosViewer: rosViewer,
                   preferences: preferences,
                   onAddWidgetPressed: () {},
                 ),
@@ -241,7 +240,7 @@ void main() {
               TabData(
                 name: 'Teleoperated',
                 tabGrid: TabGridModel(
-                  ntConnection: mockNTConnection,
+                  rosViewer: rosViewer,
                   preferences: preferences,
                   onAddWidgetPressed: () {},
                 ),
@@ -249,7 +248,7 @@ void main() {
               TabData(
                 name: 'Autonomous',
                 tabGrid: TabGridModel(
-                  ntConnection: mockNTConnection,
+                  rosViewer: rosViewer,
                   preferences: preferences,
                   onAddWidgetPressed: () {},
                 ),
@@ -319,7 +318,7 @@ void main() {
               TabData(
                 name: 'Teleoperated',
                 tabGrid: TabGridModel(
-                  ntConnection: mockNTConnection,
+                  rosViewer: rosViewer,
                   preferences: preferences,
                   onAddWidgetPressed: () {},
                 ),
@@ -327,7 +326,7 @@ void main() {
               TabData(
                 name: 'Autonomous',
                 tabGrid: TabGridModel(
-                  ntConnection: mockNTConnection,
+                  rosViewer: rosViewer,
                   preferences: preferences,
                   onAddWidgetPressed: () {},
                 ),
@@ -408,7 +407,7 @@ void main() {
               TabData(
                 name: 'Teleoperated',
                 tabGrid: TabGridModel(
-                  ntConnection: mockNTConnection,
+                  rosViewer: rosViewer,
                   preferences: preferences,
                   onAddWidgetPressed: () {},
                 ),
@@ -416,7 +415,7 @@ void main() {
               TabData(
                 name: 'Autonomous',
                 tabGrid: TabGridModel(
-                  ntConnection: mockNTConnection,
+                  rosViewer: rosViewer,
                   preferences: preferences,
                   onAddWidgetPressed: () {},
                 ),

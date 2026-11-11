@@ -31,6 +31,18 @@ To ensure a standardized process, please follow this development workflow:
 
 ### Flutter App
 
+On x86-64 or ARM64 Linux with Nix flakes enabled, run the desktop app with
+`nix run .` or build the release bundle with `nix build .`. The resulting
+executable is `./result/bin/elastic_dashboard`.
+
+To develop with the Flutter SDK and Linux build dependencies from the flake, first load the ROS environment described in [README.md](README.md).
+
+```bash
+nix develop
+flutter pub get
+flutter run -d linux
+```
+
 Elastic requires Flutter and platform-specific dependencies to run. See the [Flutter documentation](https://docs.flutter.dev/get-started) for installation instructions.
 
 Once Flutter is installed, download the package dependencies:
@@ -53,17 +65,13 @@ flutter build <PLATFORM>
     * Linux: `<PROJECT DIR>/build/linux/x64/release/bundle`
     * Web: `<PROJECT DIR>/build/web`
 
-### Robot Code Library
-
-The `elasticlib` directory contains a small robot code library written in C++, Java, and Python. Contributions to this part of the project are also welcome.
-
 ## Running Unit Tests
 
 Elastic uses the [Flutter unit test](https://docs.flutter.dev/testing/overview) library and [Mockito](https://pub.dev/packages/mockito) for unit testing.
 
 First, generate the necessary mock classes:
 ```bash
-dart run build_runner build
+flutter pub run build_runner build
 ```
 
 Then, execute all automated unit tests:

@@ -1,31 +1,27 @@
-# ![Elastic Logo](assets/logos/logo_full.png)
+# Elastic ROS 2 Viewer
 
-[![Elastic](https://github.com/Gold872/elastic_dashboard/actions/workflows/elastic-ci.yml/badge.svg)](https://github.com/Gold872/elastic_dashboard/actions/workflows/elastic-ci.yml) [![codecov](https://codecov.io/gh/Gold872/elastic_dashboard/graph/badge.svg?token=4MQYW8SMQI)](https://codecov.io/gh/Gold872/elastic_dashboard)
+A read-only ROS 2 viewer built on the [Elastic Dashboard](https://github.com/Gold872/elastic_dashboard) UI. It discovers nodes and topics through DDS, shows the publishers, message types and subscribers for each topic, and displays the latest message when a topic is selected.
 
-A simple and modern dashboard for FRC.
+## Run on Linux
 
-Download files can be found [here](https://github.com/Gold872/elastic_dashboard/releases/latest), the supported platforms are Windows, MacOS, Linux, and Web.
+Load the same ROS 2 distribution and any message packages used by the system you want to inspect. Use the same `ROS_DOMAIN_ID` and compatible DDS discovery settings.
 
-Try it in your browser! https://gold872.github.io/elastic_dashboard/
+```bash
+# Replace jazzy with your installed distribution.
+source /opt/ros/jazzy/setup.bash
+# If the ROS system uses custom message packages, source their workspace too.
+# source /path/to/workspace/install/setup.bash
+nix run .
+```
 
-## About
+The Viewer uses the Python interpreter beside the ROS 2 CLI when available on Linux and macOS, then falls back to `python3`. On Windows it uses `python`. That interpreter needs `rclpy` and `rosidl_runtime_py`. Set `ELASTIC_ROS_PYTHON` if your ROS environment provides a separate interpreter. For example, with a Nix ROS environment that exposes its Python under the ROS prefix:
 
-Elastic is a simple and modern FRC dashboard made by Nadav from FRC Team 353. It is meant to be used behind the glass as a competition driver dashboard, but it can also be used for testing. Some unique features include:
-* Customizable color scheme with over 20 variants
-* Subscription sharing to reduce bandwidth consumption
-* Optimized camera streams which automatically deactivate when not in use
-* Automatic height resizing to the FRC Driver Station
+```bash
+ELASTIC_ROS_PYTHON="$(ros2 pkg prefix rclpy)/bin/python3" nix run .
+```
 
-![Example Layout](/screenshots/example_layout.png)
+Open **ROS 2 Graph** in the bottom bar for a larger view or drag a **ROS 2 Viewer** from **Add Widget** onto the dashboard. Select a topic or message type to see its live data. The bridge creates subscriptions on the Viewer machine and requires no changes to the ROS programs. Large array fields show a preview of the first 32 items.
 
-## Documentation
-View the online documentation [here](https://frc-elastic.gitbook.io/docs)
+Tabs and list layouts from older Elastic layout files still load. Unsupported telemetry widgets are skipped. ROS 2 discovery runs in the desktop app.
 
-## Building and Contributing
-View the instructions for building code and making contributions to the project in the [CONTRIBUTING.md](CONTRIBUTING.md) file
-
-## Contributors
-
-<a href="https://github.com/Gold872/elastic_dashboard/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=Gold872/elastic_dashboard" />
-</a>
+See [CONTRIBUTING.md](CONTRIBUTING.md) for build and test commands.

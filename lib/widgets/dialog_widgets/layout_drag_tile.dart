@@ -4,20 +4,19 @@ import 'package:collection/collection.dart';
 
 import 'package:material_ui/material_ui.dart';
 
-import 'package:elastic_dashboard/widgets/draggable_containers/models/layout_container_model.dart';
+import 'package:elastic_dashboard/widgets/draggable_containers/models/widget_container_model.dart';
 import 'package:elastic_dashboard/widgets/gesture/drag_container_listener.dart';
 
-class LayoutDragTile extends StatelessWidget {
+class LayoutDragTile<T extends WidgetContainerModel> extends StatelessWidget {
   final int gridIndex;
   final String title;
   final IconData icon;
 
-  final LayoutContainerModel Function() layoutBuilder;
+  final T Function() layoutBuilder;
 
-  final void Function(Offset globalPosition, LayoutContainerModel widget)
-  onDragUpdate;
+  final void Function(Offset globalPosition, T widget) onDragUpdate;
 
-  final void Function(LayoutContainerModel widget) onDragEnd;
+  final void Function(T widget) onDragEnd;
 
   final void Function() onRemoveWidget;
 
@@ -35,7 +34,7 @@ class LayoutDragTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) => InkWell(
     onTap: () {},
-    child: DragContainerListener<LayoutContainerModel>(
+    child: DragContainerListener<T>(
       gridIndex: gridIndex,
       supportedDevices: PointerDeviceKind.values
           .whereNot((element) => element == PointerDeviceKind.trackpad)

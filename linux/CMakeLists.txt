@@ -74,6 +74,9 @@ set_target_properties(${BINARY_NAME}
 # them to the application.
 include(flutter/generated_plugins.cmake)
 
+# The prebuilt libwebrtc headers use fixed-width integers without including cstdint.
+target_compile_options(flutter_webrtc_plugin PRIVATE -include cstdint)
+
 
 # === Installation ===
 # By default, "installing" just makes a relocatable bundle in the build

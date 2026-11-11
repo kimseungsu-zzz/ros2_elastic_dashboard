@@ -3,9 +3,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flex_seed_scheme/flex_seed_scheme.dart';
 import 'package:logger/logger.dart';
 
-import 'package:elastic_dashboard/services/ip_address_util.dart';
-import 'package:elastic_dashboard/services/nt_connection.dart';
-
 extension LogLevelUtil on Level {
   String get levelName => switch (this) {
     Level.all => 'All',
@@ -36,24 +33,12 @@ class Settings {
 }
 
 class Defaults {
-  static String defaultIPForPlatform() {
-    if (kIsWeb) {
-      return Uri.base.host;
-    }
-    return '127.0.0.1';
-  }
-
-  static IPAddressMode ipAddressMode = IPAddressMode.driverStation;
-  static const NTServerTarget targetServer = NTServerTarget.robotCode;
-
   static FlexSchemeVariant themeVariant = FlexSchemeVariant.material3Legacy;
 
   static const String defaultVariantName = 'Material-3 Legacy (Default)';
   static const String defaultLogLevelName = 'Automatic';
   static const Level logLevel = kDebugMode ? Level.debug : Level.info;
-  static final String ipAddress = defaultIPForPlatform();
 
-  static const int teamNumber = 9999;
   static const int gridSize = 128;
 
   static const bool layoutLocked = false;
@@ -62,16 +47,10 @@ class Defaults {
   static const bool showOpenAssetsFolderWarning = true;
 
   static const double cornerRadius = 15.0;
-  static const double defaultPeriod = 0.06;
-  static const double defaultGraphPeriod = 0.033;
 }
 
 class PrefKeys {
   static String layout = 'layout';
-  static String ipAddress = 'ip_address';
-  static String ipAddressMode = 'ip_address_mode';
-  static String ntTargetServer = 'nt_target_server';
-  static String teamNumber = 'team_number';
   static String teamColor = 'team_color';
   static String themeVariant = 'theme_variant';
   static String layoutLocked = 'layout_locked';
@@ -80,10 +59,7 @@ class PrefKeys {
   static String showGrid = 'show_grid';
   static String autoResizeToDS = 'auto_resize_to_driver_station';
   static String rememberWindowPosition = 'remember_window_position';
-  static String defaultPeriod = 'default_period';
-  static String defaultGraphPeriod = 'default_graph_period';
   static String logLevel = 'log_level';
   static String gridDpiOverride = 'grid_dpi_override';
   static String windowPosition = 'window_position';
-  static String autoTextSubmitButton = 'auto_text_submit_button';
 }

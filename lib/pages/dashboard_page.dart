@@ -7,9 +7,7 @@ import 'package:flutter/services.dart';
 
 import 'package:collection/collection.dart';
 import 'package:elegant_notification/elegant_notification.dart';
-import 'package:elegant_notification/resources/stacked_options.dart';
 import 'package:flex_seed_scheme/flex_seed_scheme.dart';
-import 'package:http/http.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -23,12 +21,10 @@ import 'package:elastic_dashboard/pages/dashboard/dashboard_page_settings.dart';
 import 'package:elastic_dashboard/pages/dashboard/dashboard_page_tabs.dart';
 import 'package:elastic_dashboard/pages/dashboard/dashboard_page_window.dart';
 import 'package:elastic_dashboard/services/app_distributor.dart';
-import 'package:elastic_dashboard/services/elastic_layout_downloader.dart';
-import 'package:elastic_dashboard/services/elasticlib_listener.dart';
 import 'package:elastic_dashboard/services/hotkey_manager.dart';
-import 'package:elastic_dashboard/services/ip_address_util.dart';
 import 'package:elastic_dashboard/services/log.dart';
-import 'package:elastic_dashboard/services/nt_connection.dart';
+import 'package:elastic_dashboard/services/ds_interop.dart';
+import 'package:elastic_dashboard/services/ros_viewer.dart';
 import 'package:elastic_dashboard/services/settings.dart';
 import 'package:elastic_dashboard/services/update_checker.dart';
 import 'package:elastic_dashboard/util/tab_data.dart';
@@ -41,39 +37,6 @@ import 'package:elastic_dashboard/util/stub/unload_handler_stub.dart'
     if (dart.library.js_interop) 'package:elastic_dashboard/util/unload_handler.dart';
 import 'package:window_manager/window_manager.dart'
     if (dart.library.js_interop) 'package:elastic_dashboard/util/stub/window_stub.dart';
-
-enum LayoutDownloadMode {
-  overwrite(
-    name: 'Overwrite',
-    description: 'Keeps existing tabs that are not defined in the remote layout. Any tabs that are defined in the remote layout will be overwritten locally.',
-  ),
-  merge(
-    name: 'Merge',
-    description: 'Merge the downloaded layout with the existing one. If a new widget cannot be properly placed, it will not be added.',
-  ),
-  reload(
-    name: 'Full Reload',
-    description: 'Deletes the existing layout and loads the new one.',
-  );
-
-  final String name;
-  final String description;
-
-  const LayoutDownloadMode({required this.name, required this.description});
-
-  static String get descriptions {
-    String result = '';
-    for (final value in values) {
-      result += '${value.name}: ';
-      result += value.description;
-
-      if (value != values.last) {
-        result += '\n\n';
-      }
-    }
-    return result;
-  }
-}
 
 mixin DashboardPageStateMixin on State<DashboardPage> {
   void showNotification(ElegantNotification notification) {
@@ -89,14 +52,12 @@ mixin DashboardPageStateMixin on State<DashboardPage> {
 
 abstract class DashboardPageViewModel extends ChangeNotifier {
   final String version;
-  final NTConnection ntConnection;
+  final RosViewer rosViewer;
+  DSInteropClient? _driverStation;
   final SharedPreferences preferences;
   late final UpdateChecker? updateChecker;
-  late final ElasticLayoutDownloader? layoutDownloader;
   final Function(Color color)? onColorChanged;
   final Function(FlexSchemeVariant variant)? onThemeVariantChanged;
-
-  late final ElasticLibListener robotNotificationListener;
 
   final List<TabData> tabData = [];
 
@@ -118,17 +79,13 @@ abstract class DashboardPageViewModel extends ChangeNotifier {
   DashboardPageStateMixin? get state => _state;
 
   DashboardPageViewModel({
-    required this.ntConnection,
+    RosViewer? rosViewer,
     required this.preferences,
     required this.version,
     UpdateChecker? updateChecker,
-    ElasticLayoutDownloader? layoutDownloader,
     this.onColorChanged,
     this.onThemeVariantChanged,
-  }) {
-    this.layoutDownloader =
-        layoutDownloader ?? ElasticLayoutDownloader(Client());
-
+  }) : rosViewer = rosViewer ?? RosViewer() {
     this.updateChecker =
         updateChecker ?? UpdateChecker(currentVersion: version);
   }
@@ -146,96 +103,14 @@ abstract class DashboardPageViewModel extends ChangeNotifier {
   }
 
   void init() {
-    robotNotificationListener = ElasticLibListener(
-      ntConnection: ntConnection,
-      onTabSelected: (tabIdentifier) {
-        if (tabIdentifier is int) {
-          if (tabIdentifier >= tabData.length) {
-            return;
-          }
-          switchToTab(tabIdentifier);
-        } else if (tabIdentifier is String) {
-          int tabIndex = tabData.indexWhere((tab) => tab.name == tabIdentifier);
-          if (tabIndex == -1) {
-            return;
-          }
-          switchToTab(tabIndex);
-        }
-      },
-      onNotification: (title, description, icon, time, width, height) {
-        ColorScheme colorScheme = state!.theme.colorScheme;
-        TextTheme textTheme = state!.theme.textTheme;
-        var widget = ElegantNotification(
-          autoDismiss: time.inMilliseconds > 0,
-          showProgressIndicator: time.inMilliseconds > 0,
-          background: colorScheme.surface,
-          width: width,
-          height: height,
-          position: Alignment.bottomRight,
-          title: Text(
-            title,
-            style: textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold),
-          ),
-          toastDuration: time,
-          icon: icon,
-          description: Text(description),
-          stackedOptions: StackedOptions(
-            key: 'notification',
-            type: StackedType.above,
-          ),
-        );
-        state!.showNotification(widget);
-      },
-    );
-    robotNotificationListener.listen();
-
-    ntConnection.dsClientConnect();
-
-    ntConnection.dsIpAddress.addListener(() async {
-      String? ip = ntConnection.dsIpAddress.value;
-
-      if (ip == null) return;
-
-      if (preferences.getInt(PrefKeys.ipAddressMode) !=
-          IPAddressMode.driverStation.id) {
-        return;
+    if (!isUnitTest) {
+      unawaited(rosViewer.start());
+      if (!kIsWeb &&
+          (preferences.getBool(PrefKeys.autoResizeToDS) ??
+              Defaults.autoResizeToDS)) {
+        updateDriverStationResize(true);
       }
-
-      if (preferences.getString(PrefKeys.ipAddress) != ip) {
-        await preferences.setString(PrefKeys.ipAddress, ip);
-      } else {
-        return;
-      }
-
-      ntConnection.changeIPAddress(ip);
-    });
-
-    ntConnection.dsHeight.addListener(() {
-      int? height = ntConnection.dsHeight.value;
-
-      if ((preferences.getBool(PrefKeys.autoResizeToDS) ??
-              Defaults.autoResizeToDS) &&
-          height != null) {
-        onDriverStationDocked(height);
-      } else {
-        onDriverStationUndocked();
-      }
-    });
-
-    ntConnection.addConnectedListener(() {
-      for (TabGridModel grid in tabData.map((e) => e.tabGrid)) {
-        grid.onNTConnect();
-      }
-      notifyListeners();
-    });
-
-    ntConnection.addDisconnectedListener(() {
-      for (TabGridModel grid in tabData.map((e) => e.tabGrid)) {
-        grid.onNTDisconnect();
-      }
-      notifyListeners();
-    });
-
+    }
     loadLayout();
 
     if (!isWPILib) {
@@ -354,16 +229,6 @@ abstract class DashboardPageViewModel extends ChangeNotifier {
 
   bool loadLayoutFromJsonData(String jsonString) => false;
 
-  bool mergeLayoutFromJsonData(String jsonString) => false;
-
-  void overwriteLayoutFromJsonData(String jsonString) {}
-
-  Future<({String layout, LayoutDownloadMode mode})?> showRemoteLayoutSelection(
-    List<String> fileNames,
-  ) => Future.value(null);
-
-  Future<void> loadLayoutFromRobot() async {}
-
   void createDefaultTabs() {}
 
   void lockLayout() {}
@@ -435,11 +300,30 @@ abstract class DashboardPageViewModel extends ChangeNotifier {
 
   void displaySettingsDialog(BuildContext context) {}
 
-  Future<void> changeIPAddressMode(IPAddressMode mode) async {}
+  void updateDriverStationResize(bool enabled) {
+    if (enabled && _driverStation == null) {
+      final driverStation = _driverStation = DSInteropClient();
+      driverStation.dsHeightNotifier.addListener(() {
+        final height = driverStation.dsHeightNotifier.value;
+        if (height == null) {
+          onDriverStationUndocked();
+        } else {
+          onDriverStationDocked(height);
+        }
+      });
+    } else if (!enabled) {
+      _driverStation?.dispose();
+      _driverStation = null;
+      onDriverStationUndocked();
+    }
+  }
 
-  Future<void> changeNTTargetServer(NTServerTarget mode) async {}
-
-  Future<void> updateIPAddress(String newIPAddress) async {}
+  @override
+  void dispose() {
+    _driverStation?.dispose();
+    rosViewer.dispose();
+    super.dispose();
+  }
 
   Future<void> onDriverStationDocked(int dsHeight) async {}
 
@@ -560,6 +444,7 @@ class _DashboardPageState extends State<DashboardPage>
   Future<void> closeWindow() async {
     await model.saveWindowPosition();
     await windowManager.destroy();
+    model.rosViewer.dispose();
     exit(0);
   }
 
@@ -604,18 +489,6 @@ class _DashboardPageState extends State<DashboardPage>
         modifiers: [KeyModifier.control, KeyModifier.shift],
       ),
       callback: model.exportLayout,
-    );
-    // Download from robot (Ctrl + D)
-    hotKeyManager.register(
-      HotKey(LogicalKeyboardKey.keyD, modifiers: [KeyModifier.control]),
-      callback: () {
-        if (preferences.getBool(PrefKeys.layoutLocked) ??
-            Defaults.layoutLocked) {
-          return;
-        }
-
-        model.loadLayoutFromRobot();
-      },
     );
     // Switch to Tab (Ctrl + Tab #)
     for (int i = 1; i <= 9; i++) {
@@ -691,7 +564,7 @@ class _DashboardPageState extends State<DashboardPage>
           TabData(
             name: newTabName,
             tabGrid: TabGridModel(
-              ntConnection: model.ntConnection,
+              rosViewer: model.rosViewer,
               preferences: model.preferences,
               onAddWidgetPressed: model.displayAddWidgetDialog,
             ),
@@ -738,36 +611,6 @@ class _DashboardPageState extends State<DashboardPage>
         if ((ModalRoute.of(context)?.isCurrent ?? false) && mounted) {
           model.displaySettingsDialog(context);
         }
-      },
-    );
-    // Connect to robot (Ctrl + K)
-    hotKeyManager.register(
-      HotKey(LogicalKeyboardKey.keyK, modifiers: [KeyModifier.control]),
-      callback: () {
-        if (preferences.getInt(PrefKeys.ipAddressMode) ==
-            IPAddressMode.driverStation.id) {
-          return;
-        }
-        model.updateIPAddress(
-          IPAddressUtil.teamNumberToIP(
-            preferences.getInt(PrefKeys.teamNumber) ?? Defaults.teamNumber,
-          ),
-        );
-        model.changeIPAddressMode(IPAddressMode.driverStation);
-      },
-    );
-    // Connect to sim (Ctrl + Shift + K)
-    hotKeyManager.register(
-      HotKey(
-        LogicalKeyboardKey.keyK,
-        modifiers: [KeyModifier.control, KeyModifier.shift],
-      ),
-      callback: () {
-        if (preferences.getInt(PrefKeys.ipAddressMode) ==
-            IPAddressMode.localhost.id) {
-          return;
-        }
-        widget.model.changeIPAddressMode(IPAddressMode.localhost);
       },
     );
   }
@@ -862,23 +705,6 @@ class _DashboardPageState extends State<DashboardPage>
                 Icon(Icons.save_as_outlined),
                 SizedBox(width: 8),
                 Text('Save As'),
-              ],
-            ),
-          ),
-          // Download layout
-          MenuItemButton(
-            style: menuButtonStyle,
-            onPressed: !layoutLocked ? model.loadLayoutFromRobot : null,
-            shortcut: const SingleActivator(
-              LogicalKeyboardKey.keyD,
-              control: true,
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.download),
-                SizedBox(width: 8),
-                Text('Download From Robot'),
               ],
             ),
           ),
@@ -1083,7 +909,7 @@ class _DashboardPageState extends State<DashboardPage>
                           TabData(
                             name: tabName,
                             tabGrid: TabGridModel(
-                              ntConnection: model.ntConnection,
+                              rosViewer: model.rosViewer,
                               preferences: model.preferences,
                               onAddWidgetPressed: model.displayAddWidgetDialog,
                             ),
@@ -1124,7 +950,7 @@ class _DashboardPageState extends State<DashboardPage>
                             .tabGrid
                             .toJson();
                         TabGridModel newGrid = TabGridModel.fromJson(
-                          ntConnection: model.ntConnection,
+                          rosViewer: model.rosViewer,
                           preferences: preferences,
                           jsonData: tabJson,
                           onAddWidgetPressed: model.displayAddWidgetDialog,
@@ -1143,15 +969,13 @@ class _DashboardPageState extends State<DashboardPage>
                   ),
                   if (model.addWidgetDialogVisible)
                     AddWidgetDialog(
-                      ntConnection: model.ntConnection,
-                      preferences: model.preferences,
                       grid: model.tabData[model.currentTabIndex].tabGrid,
                       gridIndex: model.currentTabIndex,
-                      onNTDragUpdate: (globalPosition, widget) {
+                      onWidgetDragUpdate: (globalPosition, widget) {
                         model.tabData[model.currentTabIndex].tabGrid
                             .addDragInWidget(widget, globalPosition);
                       },
-                      onNTDragEnd: (widget) {
+                      onWidgetDragEnd: (widget) {
                         model.tabData[model.currentTabIndex].tabGrid
                             .placeDragInWidget(widget);
                       },
@@ -1172,9 +996,7 @@ class _DashboardPageState extends State<DashboardPage>
             // Bottom bar
             DashboardPageFooter(
               model: model,
-              preferences: preferences,
               footerStyle: footerStyle,
-              windowWidth: windowWidth,
             ),
           ],
         ),

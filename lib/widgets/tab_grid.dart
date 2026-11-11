@@ -1,6 +1,5 @@
 import 'dart:math';
 
-import 'package:dot_cast/dot_cast.dart';
 import 'package:flutter_box_transform/flutter_box_transform.dart';
 import 'package:flutter_context_menu/flutter_context_menu.dart';
 import 'package:provider/provider.dart';
@@ -8,22 +7,21 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:material_ui/material_ui.dart';
 
-import 'package:elastic_dashboard/services/nt_connection.dart';
-import 'package:elastic_dashboard/services/nt_widget_registry.dart';
+import 'package:elastic_dashboard/services/ros_viewer.dart';
 import 'package:elastic_dashboard/services/settings.dart';
 import 'package:elastic_dashboard/widgets/draggable_containers/draggable_list_layout.dart';
-import 'package:elastic_dashboard/widgets/draggable_containers/draggable_nt_widget_container.dart';
+import 'package:elastic_dashboard/widgets/draggable_containers/draggable_ros_widget_container.dart';
 import 'package:elastic_dashboard/widgets/draggable_containers/draggable_widget_container.dart';
 import 'package:elastic_dashboard/widgets/draggable_containers/models/layout_container_model.dart';
 import 'package:elastic_dashboard/widgets/draggable_containers/models/list_layout_model.dart';
-import 'package:elastic_dashboard/widgets/draggable_containers/models/nt_widget_container_model.dart';
+import 'package:elastic_dashboard/widgets/draggable_containers/models/ros_widget_container_model.dart';
 import 'package:elastic_dashboard/widgets/draggable_containers/models/widget_container_model.dart';
 import 'package:elastic_dashboard/widgets/gesture/context_menu_listener.dart';
 
 // Used to refresh the tab grid when a widget is added or removed
 // This doesn't use a stateful widget since everything has to be rendered at program startup or data will be lost
 class TabGridModel extends ChangeNotifier {
-  final NTConnection ntConnection;
+  final RosViewer rosViewer;
   final SharedPreferences preferences;
   final List<WidgetContainerModel> _widgetModels = [];
 
@@ -37,13 +35,13 @@ class TabGridModel extends ChangeNotifier {
   bool _disposed = false;
 
   TabGridModel({
-    required this.ntConnection,
+    required this.rosViewer,
     required this.preferences,
     required this.onAddWidgetPressed,
   });
 
   TabGridModel.fromJson({
-    required this.ntConnection,
+    required this.rosViewer,
     required this.preferences,
     required Map<String, dynamic> jsonData,
     required this.onAddWidgetPressed,
@@ -71,169 +69,53 @@ class TabGridModel extends ChangeNotifier {
     }
   }
 
-  void mergeFromJson({
-    required Map<String, dynamic> jsonData,
-    void Function(String message)? onJsonLoadingWarning,
-  }) {
-    if (jsonData['containers'] != null) {
-      for (Map<String, dynamic> widgetData in jsonData['containers']) {
-        Rect newWidgetLocation = Rect.fromLTWH(
-          tryCast(widgetData['x']) ?? 0.0,
-          tryCast(widgetData['y']) ?? 0.0,
-          tryCast(widgetData['width']) ?? 0.0,
-          tryCast(widgetData['height']) ?? 0.0,
-        );
-
-        bool valid = true;
-
-        for (WidgetContainerModel container in _widgetModels) {
-          String? title = container.title;
-          if (container is NTWidgetContainerModel) {
-            String? type = container.childModel.type;
-            String? topic = container.childModel.topic;
-
-            if (title == widgetData['title'] &&
-                type == widgetData['type'] &&
-                topic == widgetData['properties']['topic']) {
-              valid = false;
-              break;
-            }
-          }
-          bool validLocation = isValidLocation(newWidgetLocation);
-
-          if (!validLocation) {
-            valid = false;
-            break;
-          }
-        }
-
-        if (valid) {
-          addWidget(
-            NTWidgetContainerModel.fromJson(
-              ntConnection: ntConnection,
-              jsonData: widgetData,
-              preferences: preferences,
-              enabled: ntConnection.isNT4Connected,
-              onJsonLoadingWarning: onJsonLoadingWarning,
-            ),
-          );
-        }
-      }
-    }
-
-    if (jsonData['layouts'] != null) {
-      for (Map<String, dynamic> widgetData in jsonData['layouts']) {
-        Rect newWidgetLocation = Rect.fromLTWH(
-          tryCast(widgetData['x']) ?? 0.0,
-          tryCast(widgetData['y']) ?? 0.0,
-          tryCast(widgetData['width']) ?? 0.0,
-          tryCast(widgetData['height']) ?? 0.0,
-        );
-
-        bool valid = true;
-
-        for (WidgetContainerModel container in _widgetModels) {
-          String? title = container.title;
-          if (container is ListLayoutModel) {
-            String type = container.type;
-            if (title == widgetData['title'] && type == widgetData['type']) {
-              valid = false;
-              break;
-            }
-          }
-          bool validLocation = isValidLocation(newWidgetLocation);
-
-          if (!validLocation) {
-            valid = false;
-            break;
-          }
-        }
-
-        if (valid && widgetData['type'] == 'List Layout') {
-          addWidget(
-            ListLayoutModel.fromJson(
-              jsonData: widgetData,
-              preferences: preferences,
-              ntWidgetBuilder:
-                  (preferences, jsonData, enabled, {onJsonLoadingWarning}) =>
-                      NTWidgetContainerModel.fromJson(
-                        ntConnection: ntConnection,
-                        jsonData: jsonData,
-                        preferences: preferences,
-                        enabled: ntConnection.isNT4Connected,
-                        onJsonLoadingWarning: onJsonLoadingWarning,
-                      ),
-              enabled: ntConnection.isNT4Connected,
-              dragOutFunctions: (
-                dragOutUpdate: layoutDragOutUpdate,
-                dragOutEnd: layoutDragOutEnd,
-              ),
-              onDragCancel: _layoutContainerOnDragCancel,
-            ),
-          );
-        }
-      }
-    }
+  RosWidgetContainerModel? _readWidget(Map<String, dynamic> json) {
+    if (json['type'] != RosWidgetContainerModel.type) return null;
+    return RosWidgetContainerModel.fromJson(
+      viewer: rosViewer,
+      preferences: preferences,
+      jsonData: json,
+    );
   }
 
   void loadContainersFromJson(
     Map<String, dynamic> jsonData, {
     Function(String message)? onJsonLoadingWarning,
   }) {
-    for (Map<String, dynamic> containerData in jsonData['containers']) {
-      addWidget(
-        NTWidgetContainerModel.fromJson(
-          ntConnection: ntConnection,
-          preferences: preferences,
-          enabled: ntConnection.isNT4Connected,
-          jsonData: containerData,
-          onJsonLoadingWarning: onJsonLoadingWarning,
-        ),
-      );
+    for (final item in jsonData['containers'] as List) {
+      if (item is! Map<String, dynamic>) continue;
+      final widget = _readWidget(item);
+      if (widget != null) addWidget(widget);
     }
   }
+
+  ListLayoutModel _readListLayout(
+    Map<String, dynamic> data, {
+    Function(String message)? onJsonLoadingWarning,
+  }) => ListLayoutModel.fromJson(
+    preferences: preferences,
+    jsonData: data,
+    widgetBuilder: _readWidget,
+    enabled: true,
+    dragOutFunctions: (
+      dragOutUpdate: layoutDragOutUpdate,
+      dragOutEnd: layoutDragOutEnd,
+    ),
+    onDragCancel: _layoutContainerOnDragCancel,
+    onJsonLoadingWarning: onJsonLoadingWarning,
+  );
 
   void loadLayoutsFromJson(
     Map<String, dynamic> jsonData, {
     Function(String warningMessage)? onJsonLoadingWarning,
   }) {
-    for (Map<String, dynamic> layoutData in jsonData['layouts']) {
-      if (layoutData['type'] == null) {
-        onJsonLoadingWarning?.call(
-          'Layout widget type not specified, ignoring data.',
-        );
+    for (final item in jsonData['layouts'] as List) {
+      if (item is! Map<String, dynamic> || item['type'] != 'List Layout') {
         continue;
       }
-
-      late WidgetContainerModel widget;
-
-      switch (layoutData['type']) {
-        case 'List Layout':
-          widget = ListLayoutModel.fromJson(
-            preferences: preferences,
-            jsonData: layoutData,
-            ntWidgetBuilder:
-                (preferences, jsonData, enabled, {onJsonLoadingWarning}) =>
-                    NTWidgetContainerModel.fromJson(
-                      ntConnection: ntConnection,
-                      jsonData: jsonData,
-                      preferences: preferences,
-                      enabled: ntConnection.isNT4Connected,
-                      onJsonLoadingWarning: onJsonLoadingWarning,
-                    ),
-            enabled: ntConnection.isNT4Connected,
-            dragOutFunctions: (
-              dragOutUpdate: layoutDragOutUpdate,
-              dragOutEnd: layoutDragOutEnd,
-            ),
-            onDragCancel: _layoutContainerOnDragCancel,
-            onJsonLoadingWarning: onJsonLoadingWarning,
-          );
-        default:
-          continue;
-      }
-
-      addWidget(widget);
+      addWidget(
+        _readListLayout(item, onJsonLoadingWarning: onJsonLoadingWarning),
+      );
     }
   }
 
@@ -241,7 +123,7 @@ class TabGridModel extends ChangeNotifier {
     var containers = [];
     var layouts = [];
     for (WidgetContainerModel model in _widgetModels) {
-      if (model is NTWidgetContainerModel) {
+      if (model is RosWidgetContainerModel) {
         containers.add(model.toJson());
       } else {
         layouts.add(model.toJson());
@@ -509,7 +391,7 @@ class TabGridModel extends ChangeNotifier {
     }
   }
 
-  void _ntContainerOnUpdate(
+  void _widgetContainerOnUpdate(
     WidgetContainerModel widget,
     Rect newRect,
     TransformResult result,
@@ -517,35 +399,38 @@ class TabGridModel extends ChangeNotifier {
     onWidgetUpdate(widget, newRect, result);
   }
 
-  void _ntContainerOnDragBegin(WidgetContainerModel widget) {}
+  void _widgetContainerOnDragBegin(WidgetContainerModel widget) {}
 
-  void _ntContainerOnDragEnd(
+  void _widgetContainerOnDragEnd(
     WidgetContainerModel model,
     Rect releaseRect, {
     Offset? globalPosition,
   }) {
     onWidgetDragEnd(model);
 
-    NTWidgetContainerModel ntContainer = model as NTWidgetContainerModel;
+    RosWidgetContainerModel widgetContainer = model as RosWidgetContainerModel;
 
     if (model.draggingIntoLayout && globalPosition != null) {
       LayoutContainerModel? layoutModel = getLayoutAtLocation(globalPosition);
 
       if (layoutModel != null) {
-        layoutModel.addWidget(ntContainer);
-        _widgetModels.remove(ntContainer);
-        ntContainer.removeListener(notifyListeners);
+        layoutModel.addWidget(widgetContainer);
+        _widgetModels.remove(widgetContainer);
+        widgetContainer.removeListener(notifyListeners);
       }
     }
   }
 
-  void _ntContainerOnDragCancel(WidgetContainerModel widget) {
+  void _widgetContainerOnDragCancel(WidgetContainerModel widget) {
     onWidgetDragCancel(widget);
   }
 
-  void _ntContainerOnResizeBegin(WidgetContainerModel widget) {}
+  void _widgetContainerOnResizeBegin(WidgetContainerModel widget) {}
 
-  void _ntContainerOnResizeEnd(WidgetContainerModel widget, Rect releaseRect) {
+  void _widgetContainerOnResizeEnd(
+    WidgetContainerModel widget,
+    Rect releaseRect,
+  ) {
     onWidgetResizeEnd(widget);
   }
 
@@ -581,7 +466,7 @@ class TabGridModel extends ChangeNotifier {
   }
 
   bool layoutDragOutEnd(WidgetContainerModel widget) {
-    if (widget is NTWidgetContainerModel) {
+    if (widget is RosWidgetContainerModel) {
       return placeDragInWidget(widget, true);
     }
     return false;
@@ -589,18 +474,6 @@ class TabGridModel extends ChangeNotifier {
 
   void layoutDragOutUpdate(WidgetContainerModel model, Offset globalPosition) =>
       addDragInWidget(model, globalPosition);
-
-  void onNTConnect() {
-    for (WidgetContainerModel model in _widgetModels) {
-      model.enabled = true;
-    }
-  }
-
-  void onNTDisconnect() {
-    for (WidgetContainerModel container in _widgetModels) {
-      container.enabled = false;
-    }
-  }
 
   void addDragInWidget(WidgetContainerModel widget, Offset globalPosition) {
     Offset center = getDragInWidgetCenter(widget, globalPosition);
@@ -638,11 +511,10 @@ class TabGridModel extends ChangeNotifier {
     Rect previewLocation = Rect.fromLTWH(previewX, previewY, width, height);
     widget.previewRect = previewLocation;
 
-    widget.tryCast<NTWidgetContainerModel>()?.updateMinimumSize();
-    widget.enabled = ntConnection.isNT4Connected;
+    widget.enabled = true;
 
     // If dragging into layout
-    if (widget is NTWidgetContainerModel &&
+    if (widget is RosWidgetContainerModel &&
         isValidLayoutLocation(widget.cursorGlobalLocation)) {
       LayoutContainerModel layoutContainer = getLayoutAtLocation(
         widget.cursorGlobalLocation,
@@ -696,17 +568,27 @@ class TabGridModel extends ChangeNotifier {
     }
   }
 
+  RosWidgetContainerModel createRosViewer() {
+    final size =
+        (preferences.getInt(PrefKeys.gridSize) ?? Defaults.gridSize) * 3.0;
+    return RosWidgetContainerModel(
+      viewer: rosViewer,
+      preferences: preferences,
+      initialPosition: Rect.fromLTWH(0, 0, max(size, 256), max(size, 256)),
+    );
+  }
+
   ListLayoutModel createListLayout({
     String title = 'List Layout',
-    List<NTWidgetContainerModel>? children,
+    List<RosWidgetContainerModel>? children,
   }) => ListLayoutModel(
     preferences: preferences,
     title: title,
     initialPosition: Rect.fromLTWH(
       0.0,
       0.0,
-      NTWidgetRegistry.getNormalSize(preferences.getInt(PrefKeys.gridSize)) * 2,
-      NTWidgetRegistry.getNormalSize(preferences.getInt(PrefKeys.gridSize)) * 2,
+      (preferences.getInt(PrefKeys.gridSize) ?? Defaults.gridSize) * 2.0,
+      (preferences.getInt(PrefKeys.gridSize) ?? Defaults.gridSize) * 2.0,
     ),
     children: children,
     dragOutFunctions: (
@@ -832,17 +714,17 @@ class TabGrid extends StatelessWidget {
     model.tabGridContext = context;
 
     Widget getWidgetFromModel(WidgetContainerModel widgetModel) {
-      if (widgetModel is NTWidgetContainerModel) {
-        return ChangeNotifierProvider<NTWidgetContainerModel>.value(
+      if (widgetModel is RosWidgetContainerModel) {
+        return ChangeNotifierProvider<RosWidgetContainerModel>.value(
           value: widgetModel,
-          child: DraggableNTWidgetContainer(
+          child: DraggableRosWidgetContainer(
             updateFunctions: (
-              onUpdate: model._ntContainerOnUpdate,
-              onDragBegin: model._ntContainerOnDragBegin,
-              onDragEnd: model._ntContainerOnDragEnd,
-              onDragCancel: model._ntContainerOnDragCancel,
-              onResizeBegin: model._ntContainerOnResizeBegin,
-              onResizeEnd: model._ntContainerOnResizeEnd,
+              onUpdate: model._widgetContainerOnUpdate,
+              onDragBegin: model._widgetContainerOnDragBegin,
+              onDragEnd: model._widgetContainerOnDragEnd,
+              onDragCancel: model._widgetContainerOnDragCancel,
+              onResizeBegin: model._widgetContainerOnResizeBegin,
+              onResizeEnd: model._widgetContainerOnResizeEnd,
               isValidMoveLocation: model.isValidMoveLocation,
             ),
           ),
@@ -1140,44 +1022,19 @@ class TabGrid extends StatelessWidget {
     );
 
     if (grid.isValidLocation(pasteLocation)) {
-      WidgetContainerModel copiedWidget = createWidgetFromJson(
+      WidgetContainerModel? copiedWidget = createWidgetFromJson(
         grid,
         widgetJson,
       );
 
-      grid.addWidget(copiedWidget);
+      if (copiedWidget != null) grid.addWidget(copiedWidget);
     }
   }
 
-  WidgetContainerModel createWidgetFromJson(
+  WidgetContainerModel? createWidgetFromJson(
     TabGridModel grid,
     Map<String, dynamic> json,
-  ) {
-    if (json['type'] == 'List Layout') {
-      return ListLayoutModel.fromJson(
-        preferences: grid.preferences,
-        jsonData: json,
-        dragOutFunctions: (
-          dragOutUpdate: grid.layoutDragOutUpdate,
-          dragOutEnd: grid.layoutDragOutEnd,
-        ),
-        ntWidgetBuilder:
-            (preferences, jsonData, enabled, {onJsonLoadingWarning}) =>
-                NTWidgetContainerModel.fromJson(
-                  ntConnection: grid.ntConnection,
-                  jsonData: jsonData,
-                  preferences: preferences,
-                  onJsonLoadingWarning: onJsonLoadingWarning,
-                ),
-        onDragCancel: grid._layoutContainerOnDragCancel,
-      );
-    } else {
-      return NTWidgetContainerModel.fromJson(
-        ntConnection: grid.ntConnection,
-        preferences: grid.preferences,
-        enabled: grid.ntConnection.isNT4Connected,
-        jsonData: json,
-      );
-    }
-  }
+  ) => json['type'] == 'List Layout'
+      ? grid._readListLayout(json)
+      : grid._readWidget(json);
 }

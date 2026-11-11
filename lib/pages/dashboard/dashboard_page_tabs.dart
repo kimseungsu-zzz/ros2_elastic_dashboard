@@ -10,26 +10,13 @@ mixin DashboardPageTabs on DashboardPageViewModel {
   @override
   void createDefaultTabs() {
     if (tabData.isEmpty) {
-      logger.info('Creating default Teleoperated and Autonomous tabs');
-
-      tabData.addAll([
-        TabData(
-          name: 'Teleoperated',
-          tabGrid: TabGridModel(
-            ntConnection: ntConnection,
-            preferences: preferences,
-            onAddWidgetPressed: displayAddWidgetDialog,
-          ),
-        ),
-        TabData(
-          name: 'Autonomous',
-          tabGrid: TabGridModel(
-            ntConnection: ntConnection,
-            preferences: preferences,
-            onAddWidgetPressed: displayAddWidgetDialog,
-          ),
-        ),
-      ]);
+      final grid = TabGridModel(
+        rosViewer: rosViewer,
+        preferences: preferences,
+        onAddWidgetPressed: displayAddWidgetDialog,
+      );
+      grid.addWidget(grid.createRosViewer());
+      tabData.add(TabData(name: 'ROS 2', tabGrid: grid));
       notifyListeners();
     }
   }
