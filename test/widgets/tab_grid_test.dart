@@ -39,7 +39,7 @@ void main() {
     viewer.dispose();
   });
 
-  test('unsupported widgets in older layouts are skipped', () async {
+  test('legacy layout keeps generic widgets and skips the FRC field', () async {
     SharedPreferences.setMockInitialValues({});
     final viewer = RosViewer();
     final grid = TabGridModel.fromJson(
@@ -47,7 +47,15 @@ void main() {
       preferences: await SharedPreferences.getInstance(),
       jsonData: {
         'containers': [
-          {'type': 'Legacy widget'},
+          {
+            'type': 'Field',
+            'properties': {'topic': '/SmartDashboard/Field'},
+          },
+          {
+            'type': 'Number Bar',
+            'title': 'Speed',
+            'properties': {'topic': '/robot/speed', 'min_value': -4.0},
+          },
         ],
         'layouts': [
           {
@@ -62,7 +70,10 @@ void main() {
       onAddWidgetPressed: () {},
     );
     final saved = grid.toJson();
-    expect(saved['containers'], isEmpty);
+    final widget = (saved['containers'] as List).single;
+    expect(widget['type'], 'Number Bar');
+    expect(widget['topic'], '/robot/speed');
+    expect(widget['properties']['min_value'], -4.0);
     expect((saved['layouts'] as List).single['title'], 'Saved list');
     expect((saved['layouts'] as List).single['children'], isEmpty);
     grid.dispose();

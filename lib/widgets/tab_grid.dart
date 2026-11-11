@@ -17,6 +17,7 @@ import 'package:elastic_dashboard/widgets/draggable_containers/models/list_layou
 import 'package:elastic_dashboard/widgets/draggable_containers/models/ros_widget_container_model.dart';
 import 'package:elastic_dashboard/widgets/draggable_containers/models/widget_container_model.dart';
 import 'package:elastic_dashboard/widgets/gesture/context_menu_listener.dart';
+import 'package:elastic_dashboard/widgets/topic_widgets/topic_widget_style.dart';
 
 // Used to refresh the tab grid when a widget is added or removed
 // This doesn't use a stateful widget since everything has to be rendered at program startup or data will be lost
@@ -70,25 +71,24 @@ class TabGridModel extends ChangeNotifier {
   }
 
   RosWidgetContainerModel? _readWidget(Map<String, dynamic> json) {
+    final widgetType = json['type'];
     RosTopicKey? binding;
-    switch (json['type']) {
-      case RosWidgetContainerModel.topicType:
-        final name = json['topic'];
-        final type = json['message_type'];
-        if (name is! String ||
-            !name.startsWith('/') ||
-            type is! String ||
-            type.isEmpty) {
-          return null;
-        }
-        binding = (name: name, type: type);
-      case RosWidgetContainerModel.graphType:
-        break;
-      default:
-        return null;
+    TopicWidgetStyle? style;
+    if (widgetType != RosWidgetContainerModel.graphType) {
+      final props = json['properties'];
+      final topic = json['topic'] ?? (props is Map ? props['topic'] : null);
+      if (topic is! String || !topic.startsWith('/')) return null;
+      final messageType = json['message_type'];
+      final type = messageType is String ? messageType : '';
+      style = widgetType == RosWidgetContainerModel.topicType
+          ? TopicWidgetStyle.defaultFor(type)
+          : TopicWidgetStyle.fromLabel(widgetType);
+      if (style == null) return null;
+      binding = (name: topic, type: type);
     }
     return RosWidgetContainerModel.fromJson(
       topic: binding,
+      style: style,
       viewer: rosViewer,
       preferences: preferences,
       jsonData: json,
@@ -597,15 +597,20 @@ class TabGridModel extends ChangeNotifier {
     );
   }
 
-  RosWidgetContainerModel createRosTopic(RosTopicKey topic) {
+  RosWidgetContainerModel createRosTopic(
+    RosTopicKey topic, {
+    TopicWidgetStyle? style,
+  }) {
     final gridSize =
         (preferences.getInt(PrefKeys.gridSize) ?? Defaults.gridSize).toDouble();
-    final size = (128 / gridSize).ceil() * gridSize;
+    final effectiveStyle = style ?? TopicWidgetStyle.defaultFor(topic.type);
+    final size = effectiveStyle.minCells.ceil() * gridSize;
     return RosWidgetContainerModel(
       viewer: rosViewer,
       preferences: preferences,
       topic: topic,
-      initialPosition: Rect.fromLTWH(0, 0, size * 2, size),
+      style: effectiveStyle,
+      initialPosition: Rect.fromLTWH(0, 0, size, size),
     );
   }
 

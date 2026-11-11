@@ -32,6 +32,7 @@ import 'package:elastic_dashboard/util/test_utils.dart';
 import 'package:elastic_dashboard/widgets/custom_appbar.dart';
 import 'package:elastic_dashboard/widgets/editable_tab_bar.dart';
 import 'package:elastic_dashboard/widgets/tab_grid.dart';
+import 'package:elastic_dashboard/widgets/ros/ros_graph.dart';
 
 import 'package:elastic_dashboard/util/stub/unload_handler_stub.dart'
     if (dart.library.js_interop) 'package:elastic_dashboard/util/unload_handler.dart';
@@ -767,6 +768,28 @@ class _DashboardPageState extends State<DashboardPage>
                 Text('About'),
               ],
             ),
+          ),
+          MenuItemButton(
+            style: menuButtonStyle,
+            leadingIcon: const Icon(Icons.account_tree),
+            onPressed: () => showDialog<void>(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('ROS 2 Graph'),
+                content: SizedBox(
+                  width: 900,
+                  height: MediaQuery.of(context).size.height * 0.6,
+                  child: RosGraph(viewer: model.rosViewer),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Close'),
+                  ),
+                ],
+              ),
+            ),
+            child: const Text('ROS 2 Graph'),
           ),
           // Check for Updates (not for WPILib distribution)
           if (!isWPILib)

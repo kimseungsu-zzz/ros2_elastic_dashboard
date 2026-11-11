@@ -13,6 +13,7 @@ dependencies:
   dropdown_button2: ^2.3.9
   elegant_notification: ^2.5.1
   file_selector: ^1.0.4
+  fl_chart: ^1.1.1
   flex_seed_scheme: ^5.0.0
   flutter:
     sdk: flutter
@@ -21,6 +22,10 @@ dependencies:
   flutter_context_menu: ^0.4.2
   flutter_launcher_icons: ^0.14.4
   flutter_webrtc: ^1.5.2
+  geekyants_flutter_gauges:
+    git:
+      url: https://github.com/Gold872/GaugesFlutter.git
+      ref: elastic-version
   github: ^9.25.0
   http: ^1.6.0
   intl: ^0.20.2

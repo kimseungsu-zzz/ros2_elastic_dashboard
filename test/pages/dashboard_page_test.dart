@@ -12,6 +12,7 @@ import 'package:titlebar_buttons/titlebar_buttons.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'package:elastic_dashboard/pages/dashboard_page.dart';
+import 'package:elastic_dashboard/pages/dashboard/dashboard_page_footer.dart';
 import 'package:elastic_dashboard/services/hotkey_manager.dart';
 import 'package:elastic_dashboard/services/ros_viewer.dart';
 import 'package:elastic_dashboard/services/settings.dart';
@@ -89,7 +90,13 @@ void main() {
       expect(fileButton, findsOneWidget);
       expect(collapsedMenu, findsNothing);
       expect(title, findsOneWidget);
-      expect(find.text('ROS 2 Graph'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(DashboardPageFooter),
+          matching: find.text('Connecting to ROS 2…'),
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('Hides title when width = 525', (widgetTester) async {
@@ -136,7 +143,7 @@ void main() {
     await tester.tap(find.widgetWithText(MenuItemButton, 'Add Widget'));
     await tester.pumpAndSettle();
 
-    final topic = find.text('/imu');
+    final topic = find.text('imu');
     expect(topic, findsOneWidget);
     expect(find.text('sensor_msgs/msg/Imu'), findsOneWidget);
     final start = tester.getCenter(topic);
@@ -150,7 +157,7 @@ void main() {
 
     final grid = dashboard.tabData.first.tabGrid.toJson();
     final widget = (grid['containers'] as List).singleWhere(
-      (container) => container['type'] == 'ROS 2 Topic',
+      (container) => container['type'] == 'Text Display',
     );
     expect(widget['topic'], '/imu');
     expect(widget['message_type'], 'sensor_msgs/msg/Imu');

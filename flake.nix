@@ -54,6 +54,8 @@
             src = self;
             autoPubspecLock = ./pubspec.lock;
 
+            gitHashes.geekyants_flutter_gauges = "sha256-ZnZhsbxKIevv87v+6yUrwqVd/3XN/9mzvM9mNnFyuBQ=";
+
             # Stage the binary where the plugin's CMake script expects its cached download.
             customSourceBuilders.flutter_webrtc =
               { src, version, ... }:

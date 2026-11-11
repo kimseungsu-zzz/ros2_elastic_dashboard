@@ -20,10 +20,10 @@ The Viewer uses the Python interpreter beside the ROS 2 CLI when available on Li
 ELASTIC_ROS_PYTHON="$(ros2 pkg prefix rclpy)/bin/python3" nix run .
 ```
 
-Open **Add Widget → ROS 2 Topics**, then drag a topic and message type onto the dashboard. Each widget subscribes to its own topic, and saving the layout preserves those bindings. To show one field such as `orientation.x`, open the widget's **Edit Properties** and enter its field path. Open **ROS 2 Graph** in the bottom bar to inspect publisher and subscriber relationships.
+Open **Add Widget → ROS 2 Topics**, then drag a topic and message type onto the dashboard. The original **Show As** menu switches between Elastic displays such as Boolean Box, Number Bar, Graph and Text Display. Saving the layout preserves the selected display and topic. To show one field such as `orientation.x`, open the widget's **Edit Properties** and enter its field path. Open **ROS 2 Graph** in the Help menu to inspect publisher and subscriber relationships.
 
 The bridge creates subscriptions on the Viewer machine and requires no changes to the ROS programs. Large array fields show a preview of the first 32 items.
 
-Tabs and list layouts from older Elastic layout files still load. Unsupported telemetry widgets are skipped. ROS 2 discovery runs in the desktop app.
+Tabs, list layouts and supported widgets from older Elastic layout files still load. Use **Edit Properties → Topic** to update a legacy topic path. The Cameras tab accepts ROS string topics carrying MJPEG or WHEP URLs. ROS 2 discovery runs in the desktop app.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for build and test commands.

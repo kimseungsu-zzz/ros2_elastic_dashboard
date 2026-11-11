@@ -1,0 +1,41 @@
+import 'package:dot_cast/dot_cast.dart';
+import 'package:provider/provider.dart';
+
+import 'package:material_ui/material_ui.dart';
+
+import 'package:elastic_dashboard/widgets/topic_widgets/topic_widget.dart';
+
+class SingleColorView extends TopicWidget {
+  static const String widgetType = 'Single Color View';
+
+  const SingleColorView({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final model = context.watch<TopicWidgetModel>();
+
+    return ValueListenableBuilder(
+      valueListenable: model.subscription,
+      builder: (context, data, child) {
+        String hexString = tryCast(data) ?? '';
+
+        hexString = hexString.toUpperCase().replaceAll('#', '');
+
+        if (hexString.length == 6) {
+          hexString = 'FF$hexString';
+        }
+
+        int hexCode = int.tryParse(hexString, radix: 16) ?? 0x00000000;
+
+        Color color = Color(hexCode);
+
+        return Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(15.0),
+            color: color,
+          ),
+        );
+      },
+    );
+  }
+}

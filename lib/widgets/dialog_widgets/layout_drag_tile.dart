@@ -52,7 +52,18 @@ class LayoutDragTile<T extends WidgetContainerModel> extends StatelessWidget {
           contentPadding: const EdgeInsets.only(right: 20.0),
           leading: Icon(icon),
           title: Text(title),
-          subtitle: subtitle == null ? null : Text(subtitle!),
+          trailing: subtitle == null
+              ? null
+              : SizedBox(
+                  width: 160,
+                  child: Text(
+                    subtitle!,
+                    textAlign: TextAlign.right,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ),
         ),
       ),
     ),

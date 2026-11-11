@@ -1,0 +1,57 @@
+import 'package:dot_cast/dot_cast.dart';
+import 'package:provider/provider.dart';
+
+import 'package:material_ui/material_ui.dart';
+
+import 'package:elastic_dashboard/widgets/topic_widgets/topic_widget.dart';
+
+class MultiColorView extends TopicWidget {
+  static const String widgetType = 'Multi Color View';
+
+  const MultiColorView({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final model = context.watch<TopicWidgetModel>();
+
+    return ValueListenableBuilder(
+      valueListenable: model.subscription,
+      builder: (context, data, child) {
+        List<Object?> hexStringsRaw = data?.tryCast<List<Object?>>() ?? [];
+        List<String> hexStrings = hexStringsRaw.whereType<String>().toList();
+
+        List<Color> colors = [];
+
+        for (String hexString in hexStrings) {
+          hexString = hexString.toUpperCase().replaceAll('#', '');
+
+          if (hexString.length == 6) {
+            hexString = 'FF$hexString';
+          }
+
+          int? hexCode = int.tryParse(hexString, radix: 16);
+
+          if (hexCode != null) {
+            colors.add(Color(hexCode));
+          }
+        }
+
+        if (colors.length < 2) {
+          if (colors.length == 1) {
+            colors.add(colors[0]);
+          } else {
+            colors.add(Colors.transparent);
+            colors.add(Colors.transparent);
+          }
+        }
+
+        return Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(15.0),
+            gradient: LinearGradient(colors: colors),
+          ),
+        );
+      },
+    );
+  }
+}

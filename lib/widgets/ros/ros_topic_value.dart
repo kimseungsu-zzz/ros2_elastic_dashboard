@@ -1,19 +1,25 @@
-import 'dart:convert';
+import 'package:provider/provider.dart';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'package:elastic_dashboard/services/ros_viewer.dart';
+import 'package:elastic_dashboard/widgets/topic_widgets/topic_widget.dart';
+import 'package:elastic_dashboard/widgets/topic_widgets/topic_widget_style.dart';
 
 class RosTopicValue extends StatefulWidget {
   final RosViewer viewer;
   final RosTopicKey topic;
   final String fieldPath;
+  final TopicWidgetModel model;
+  final TopicWidgetStyle style;
 
   const RosTopicValue({
     super.key,
     required this.viewer,
     required this.topic,
     required this.fieldPath,
+    required this.model,
+    required this.style,
   });
 
   @override
@@ -21,112 +27,126 @@ class RosTopicValue extends StatefulWidget {
 }
 
 class _RosTopicValueState extends State<RosTopicValue> {
-  late ValueNotifier<RosSample?> _sample;
+  RosTopicKey? _binding;
+  ValueNotifier<RosSample?>? _sample;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
-    _sample = widget.viewer.watchTopic(widget.topic);
+    widget.viewer.addListener(_onGraph);
+    _refreshBinding();
   }
 
   @override
   void didUpdateWidget(RosTopicValue oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.viewer != widget.viewer || oldWidget.topic != widget.topic) {
-      oldWidget.viewer.unwatchTopic(oldWidget.topic);
-      _sample = widget.viewer.watchTopic(widget.topic);
+    if (oldWidget.viewer != widget.viewer) {
+      oldWidget.viewer.removeListener(_onGraph);
+      _unwatch(oldWidget.viewer);
+      widget.viewer.addListener(_onGraph);
+    }
+    final previousBinding = _binding;
+    _refreshBinding();
+    if (_binding == previousBinding &&
+        (oldWidget.model != widget.model ||
+            oldWidget.fieldPath != widget.fieldPath)) {
+      _updateValue();
     }
   }
 
   @override
   void dispose() {
-    widget.viewer.unwatchTopic(widget.topic);
+    widget.viewer.removeListener(_onGraph);
+    _unwatch(widget.viewer);
     super.dispose();
   }
 
-  String _format(RosSample sample) {
-    if (sample.isError) return sample.text;
+  void _unwatch(RosViewer viewer) {
+    _sample?.removeListener(_onSample);
+    if (_binding case final binding?) viewer.unwatchTopic(binding);
+    _binding = null;
+    _sample = null;
+  }
 
-    Object? value = sample.data;
-    if (widget.fieldPath.isEmpty) {
-      if (value is Map && value.length == 1 && value.containsKey('data')) {
-        value = value['data'];
+  void _onGraph() {
+    _refreshBinding();
+    setState(() {});
+  }
+
+  void _refreshBinding() {
+    var binding = widget.topic;
+    if (binding.type.isEmpty) {
+      final discovered = widget.viewer.topics
+          .where((topic) => topic.name == binding.name)
+          .firstOrNull;
+      if (discovered == null || discovered.types.length != 1) {
+        if (_binding != null) {
+          _unwatch(widget.viewer);
+          _updateValue();
+        }
+        return;
       }
-    } else {
-      for (final segment in widget.fieldPath.split('.')) {
-        final index = int.tryParse(segment);
-        if (value is Map && value.containsKey(segment)) {
-          value = value[segment];
-        } else if (value is List &&
-            index != null &&
-            index >= 0 &&
-            index < value.length) {
-          value = value[index];
-        } else {
-          return 'Field not found: ${widget.fieldPath}';
+      binding = (name: binding.name, type: discovered.types.single);
+    }
+    if (binding == _binding) return;
+    _unwatch(widget.viewer);
+    _binding = binding;
+    _sample = widget.viewer.watchTopic(binding)..addListener(_onSample);
+    _updateValue();
+  }
+
+  void _onSample() {
+    final previousError = _error;
+    _updateValue();
+    if (previousError != _error) setState(() {});
+  }
+
+  void _updateValue() {
+    final sample = _sample?.value;
+    _error = null;
+    Object? value = sample?.data;
+    if (sample?.isError == true) {
+      _error = sample!.text;
+    } else if (sample != null) {
+      if (widget.fieldPath.isEmpty) {
+        if (value is Map && value.length == 1 && value.containsKey('data')) {
+          value = value['data'];
+        }
+      } else {
+        for (final segment in widget.fieldPath.split('.')) {
+          final index = int.tryParse(segment);
+          if (value is Map && value.containsKey(segment)) {
+            value = value[segment];
+          } else if (value is List &&
+              index != null &&
+              index >= 0 &&
+              index < value.length) {
+            value = value[index];
+          } else {
+            _error = 'Field not found: ${widget.fieldPath}';
+            value = null;
+            break;
+          }
         }
       }
     }
-
-    return value is String
-        ? value
-        : const JsonEncoder.withIndent('  ').convert(value);
+    widget.model.subscription.receive(value);
   }
 
   @override
-  Widget build(BuildContext context) => ListenableBuilder(
-    listenable: widget.viewer,
-    builder: (context, _) {
-      final viewer = widget.viewer;
-      final topic = widget.topic;
-      final published = viewer.topics.any(
-        (entry) =>
-            entry.name == topic.name &&
-            entry.types.contains(topic.type) &&
-            entry.publishers.isNotEmpty,
-      );
+  Widget build(BuildContext context) {
+    final error = _error;
+    if (error != null) {
+      return Center(child: Text(error, overflow: TextOverflow.ellipsis));
+    }
+    if (_binding == null) {
+      return Center(child: Text('Waiting for ${widget.topic.name}'));
+    }
 
-      return ValueListenableBuilder(
-        valueListenable: _sample,
-        builder: (context, sample, _) {
-          final label = widget.fieldPath.isEmpty
-              ? topic.type
-              : '${topic.type} · ${widget.fieldPath}';
-          final value = switch (sample) {
-            final received? => _format(received),
-            null when !viewer.ready => viewer.status,
-            null when !published => 'Waiting for a publisher…',
-            null => 'Waiting for a message…',
-          };
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Tooltip(
-                  message: '${topic.name}\n$label',
-                  child: Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.labelSmall,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                SelectableText(
-                  value,
-                  style: TextStyle(
-                    fontFamily: 'monospace',
-                    color: sample?.isError == true
-                        ? Theme.of(context).colorScheme.error
-                        : null,
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      );
-    },
-  );
+    return ChangeNotifierProvider<TopicWidgetModel>.value(
+      value: widget.model,
+      child: widget.style.build(),
+    );
+  }
 }
