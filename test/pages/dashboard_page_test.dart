@@ -82,7 +82,7 @@ void main() {
   group('[Responsive Layout]:', () {
     final fileButton = find.widgetWithText(SubmenuButton, 'File');
     final collapsedMenu = find.widgetWithIcon(SubmenuButton, Icons.menu);
-    final title = find.text('Elastic');
+    final title = find.text('ROS2 Elastic');
 
     testWidgets('Shows everything on normal screen', (widgetTester) async {
       await pumpDashboardPage(widgetTester, preferences);

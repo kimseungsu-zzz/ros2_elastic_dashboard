@@ -1,4 +1,4 @@
-#define MyAppName "Elastic ROS 2"
+#define MyAppName "ROS2 Elastic"
 #define MyAppFolderName "Elastic ROS 2"
 #define MyAppPublisher "Gold87"
 #define MyAppURL "https://github.com/Gold872/elastic_dashboard/"

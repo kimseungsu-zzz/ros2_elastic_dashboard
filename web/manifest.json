@@ -1,6 +1,6 @@
 {
-    "name": "Elastic",
-    "short_name": "Elastic",
+    "name": "ROS2 Elastic",
+    "short_name": "ROS2 Elastic",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#1f47a1",

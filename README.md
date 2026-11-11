@@ -1,4 +1,4 @@
-# Elastic ROS 2 Viewer
+# ROS2 Elastic
 
 A read-only ROS 2 viewer built on the [Elastic Dashboard](https://github.com/Gold872/elastic_dashboard) UI. It discovers nodes and topics through DDS, shows the publishers, message types and subscribers for each topic, and displays the latest message when a topic is selected.
 

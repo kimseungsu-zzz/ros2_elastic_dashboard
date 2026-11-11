@@ -90,7 +90,7 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.gold872" "\0"
-            VALUE "FileDescription", "elastic" "\0"
+            VALUE "FileDescription", "ROS2 Elastic" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "elastic_dashboard" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2023 Gold872. All rights reserved." "\0"
