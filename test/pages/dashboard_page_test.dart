@@ -13,6 +13,7 @@ import 'package:material_ui/material_ui.dart';
 
 import 'package:elastic_dashboard/pages/dashboard_page.dart';
 import 'package:elastic_dashboard/services/hotkey_manager.dart';
+import 'package:elastic_dashboard/services/ros_viewer.dart';
 import 'package:elastic_dashboard/services/settings.dart';
 import 'package:elastic_dashboard/services/update_checker.dart';
 import 'package:elastic_dashboard/widgets/custom_appbar.dart';
@@ -112,6 +113,48 @@ void main() {
       expect(collapsedMenu, findsOneWidget);
       expect(title, findsNothing);
     });
+  });
+
+  testWidgets('drags a discovered topic into a bound dashboard widget', (
+    tester,
+  ) async {
+    await pumpDashboardPage(tester, preferences);
+    final dashboard = tester
+        .widget<DashboardPage>(find.byType(DashboardPage))
+        .model;
+    dashboard.rosViewer
+      ..ready = true
+      ..topics = [
+        RosTopic.fromJson({
+          'name': '/imu',
+          'types': ['sensor_msgs/msg/Imu'],
+          'publishers': ['/robot'],
+          'subscribers': <String>[],
+        }),
+      ];
+
+    await tester.tap(find.widgetWithText(MenuItemButton, 'Add Widget'));
+    await tester.pumpAndSettle();
+
+    final topic = find.text('/imu');
+    expect(topic, findsOneWidget);
+    expect(find.text('sensor_msgs/msg/Imu'), findsOneWidget);
+    final start = tester.getCenter(topic);
+    final drag = await tester.startGesture(start);
+    await drag.moveBy(const Offset(40, 0));
+    await tester.pump();
+    await drag.moveTo(const Offset(1000, 430));
+    await tester.pump();
+    await drag.up();
+    await tester.pumpAndSettle();
+
+    final grid = dashboard.tabData.first.tabGrid.toJson();
+    final widget = (grid['containers'] as List).singleWhere(
+      (container) => container['type'] == 'ROS 2 Topic',
+    );
+    expect(widget['topic'], '/imu');
+    expect(widget['message_type'], 'sensor_msgs/msg/Imu');
+    expect(find.widgetWithText(WidgetContainer, '/imu'), findsOneWidget);
   });
 
   testWidgets('About dialog', (widgetTester) async {

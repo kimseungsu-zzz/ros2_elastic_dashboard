@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:elastic_dashboard/services/ros_viewer.dart';
 import 'package:elastic_dashboard/widgets/ros/ros_graph.dart';
+import 'package:elastic_dashboard/widgets/ros/ros_topic_value.dart';
 
 class TestRosViewer extends RosViewer {
   final sample = ValueNotifier<RosSample?>(null);
@@ -37,6 +38,39 @@ class TestRosViewer extends RosViewer {
 }
 
 void main() {
+  testWidgets('a topic widget keeps its binding and projects a nested field', (
+    tester,
+  ) async {
+    final viewer = TestRosViewer();
+    addTearDown(viewer.dispose);
+    const key = (name: '/imu', type: 'sensor_msgs/msg/Imu');
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: RosTopicValue(
+            viewer: viewer,
+            topic: key,
+            fieldPath: 'orientation.x',
+          ),
+        ),
+      ),
+    );
+    expect(viewer.watched, key);
+
+    viewer.sample.value = const RosSample(
+      'IMU sample',
+      data: {
+        'orientation': {'x': 0.012, 'y': 0.001},
+      },
+    );
+    await tester.pump();
+    expect(find.text('0.012'), findsOneWidget);
+    expect(find.textContaining('0.001'), findsNothing);
+
+    await tester.pumpWidget(const SizedBox());
+    expect(viewer.watched, isNull);
+  });
+
   testWidgets('selects a discovered topic and renders its changing data', (
     tester,
   ) async {

@@ -15,7 +15,6 @@ mixin DashboardPageTabs on DashboardPageViewModel {
         preferences: preferences,
         onAddWidgetPressed: displayAddWidgetDialog,
       );
-      grid.addWidget(grid.createRosViewer());
       tabData.add(TabData(name: 'ROS 2', tabGrid: grid));
       notifyListeners();
     }

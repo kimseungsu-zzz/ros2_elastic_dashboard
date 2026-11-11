@@ -20,7 +20,9 @@ The Viewer uses the Python interpreter beside the ROS 2 CLI when available on Li
 ELASTIC_ROS_PYTHON="$(ros2 pkg prefix rclpy)/bin/python3" nix run .
 ```
 
-Open **ROS 2 Graph** in the bottom bar for a larger view or drag a **ROS 2 Viewer** from **Add Widget** onto the dashboard. Select a topic or message type to see its live data. The bridge creates subscriptions on the Viewer machine and requires no changes to the ROS programs. Large array fields show a preview of the first 32 items.
+Open **Add Widget → ROS 2 Topics**, then drag a topic and message type onto the dashboard. Each widget subscribes to its own topic, and saving the layout preserves those bindings. To show one field such as `orientation.x`, open the widget's **Edit Properties** and enter its field path. Open **ROS 2 Graph** in the bottom bar to inspect publisher and subscriber relationships.
+
+The bridge creates subscriptions on the Viewer machine and requires no changes to the ROS programs. Large array fields show a preview of the first 32 items.
 
 Tabs and list layouts from older Elastic layout files still load. Unsupported telemetry widgets are skipped. ROS 2 discovery runs in the desktop app.
 

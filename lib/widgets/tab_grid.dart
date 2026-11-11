@@ -70,8 +70,25 @@ class TabGridModel extends ChangeNotifier {
   }
 
   RosWidgetContainerModel? _readWidget(Map<String, dynamic> json) {
-    if (json['type'] != RosWidgetContainerModel.type) return null;
+    RosTopicKey? binding;
+    switch (json['type']) {
+      case RosWidgetContainerModel.topicType:
+        final name = json['topic'];
+        final type = json['message_type'];
+        if (name is! String ||
+            !name.startsWith('/') ||
+            type is! String ||
+            type.isEmpty) {
+          return null;
+        }
+        binding = (name: name, type: type);
+      case RosWidgetContainerModel.graphType:
+        break;
+      default:
+        return null;
+    }
     return RosWidgetContainerModel.fromJson(
+      topic: binding,
       viewer: rosViewer,
       preferences: preferences,
       jsonData: json,
@@ -492,11 +509,13 @@ class TabGridModel extends ChangeNotifier {
     WidgetContainerModel widget, [
     bool fromLayout = false,
   ]) {
-    if (_containerDraggingIn == null) {
+    if (_containerDraggingIn?.key != widget) {
+      if (!fromLayout) widget.dispose();
       return false;
     }
 
     Offset globalPosition = _containerDraggingIn!.value;
+    _containerDraggingIn = null;
 
     Offset center = getDragInWidgetCenter(widget, globalPosition);
 
@@ -575,6 +594,18 @@ class TabGridModel extends ChangeNotifier {
       viewer: rosViewer,
       preferences: preferences,
       initialPosition: Rect.fromLTWH(0, 0, max(size, 256), max(size, 256)),
+    );
+  }
+
+  RosWidgetContainerModel createRosTopic(RosTopicKey topic) {
+    final gridSize =
+        (preferences.getInt(PrefKeys.gridSize) ?? Defaults.gridSize).toDouble();
+    final size = (128 / gridSize).ceil() * gridSize;
+    return RosWidgetContainerModel(
+      viewer: rosViewer,
+      preferences: preferences,
+      topic: topic,
+      initialPosition: Rect.fromLTWH(0, 0, size * 2, size),
     );
   }
 

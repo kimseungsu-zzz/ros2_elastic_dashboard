@@ -11,6 +11,7 @@ class LayoutDragTile<T extends WidgetContainerModel> extends StatelessWidget {
   final int gridIndex;
   final String title;
   final IconData icon;
+  final String? subtitle;
 
   final T Function() layoutBuilder;
 
@@ -25,6 +26,7 @@ class LayoutDragTile<T extends WidgetContainerModel> extends StatelessWidget {
     required this.gridIndex,
     required this.title,
     required this.icon,
+    this.subtitle,
     required this.layoutBuilder,
     required this.onDragUpdate,
     required this.onDragEnd,
@@ -50,6 +52,7 @@ class LayoutDragTile<T extends WidgetContainerModel> extends StatelessWidget {
           contentPadding: const EdgeInsets.only(right: 20.0),
           leading: Icon(icon),
           title: Text(title),
+          subtitle: subtitle == null ? null : Text(subtitle!),
         ),
       ),
     ),

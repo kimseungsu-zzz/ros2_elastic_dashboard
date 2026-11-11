@@ -25,8 +25,9 @@ class RosTopic {
 class RosSample {
   final String text;
   final bool isError;
+  final Object? data;
 
-  const RosSample(this.text, {this.isError = false});
+  const RosSample(this.text, {this.isError = false, this.data});
 }
 
 class RosViewer extends ChangeNotifier {
@@ -182,6 +183,7 @@ class RosViewer extends ChangeNotifier {
               ? 'Cannot read ${key.type}: ${event['message']}'
               : const JsonEncoder.withIndent('  ').convert(event['data']),
           isError: error,
+          data: event['data'],
         );
     }
   }

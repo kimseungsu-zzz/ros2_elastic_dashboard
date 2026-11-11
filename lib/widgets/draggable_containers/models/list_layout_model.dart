@@ -209,9 +209,7 @@ class ListLayoutModel extends LayoutContainerModel {
                               padding: EdgeInsets.zero,
                               child: ExpansionTile(
                                 title: Text(container.title ?? ''),
-                                subtitle: const Text(
-                                  RosWidgetContainerModel.type,
-                                ),
+                                subtitle: Text(container.type),
                                 controlAffinity:
                                     ListTileControlAffinity.leading,
                                 trailing: IconButton(
@@ -303,7 +301,10 @@ class ListLayoutModel extends LayoutContainerModel {
       ),
     ];
 
-    return containerEditProperties;
+    return [
+      ...containerEditProperties,
+      ...container.getTopicEditProperties(onChanged: notifyListeners),
+    ];
   }
 
   @override

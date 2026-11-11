@@ -16,7 +16,11 @@ void main() {
       preferences: preferences,
       onAddWidgetPressed: () {},
     );
-    grid.addWidget(grid.createRosViewer());
+    final topic = grid.createRosTopic((
+      name: '/imu',
+      type: 'sensor_msgs/msg/Imu',
+    ));
+    grid.addWidget(topic);
     grid.addWidget(grid.createListLayout(children: [grid.createRosViewer()]));
 
     final restored = TabGridModel.fromJson(
@@ -26,6 +30,9 @@ void main() {
       onAddWidgetPressed: () {},
     );
 
+    final restoredWidget = (restored.toJson()['containers'] as List).single;
+    expect(restoredWidget['topic'], '/imu');
+    expect(restoredWidget['message_type'], 'sensor_msgs/msg/Imu');
     expect(restored.toJson(), grid.toJson());
     restored.dispose();
     grid.dispose();

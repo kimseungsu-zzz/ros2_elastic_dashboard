@@ -93,9 +93,34 @@ def read_commands(commands):
         commands.put(None)
 
 
+def publisher_profile(node, topic, type_name):
+    publishers = [
+        endpoint.qos_profile
+        for endpoint in node.get_publishers_info_by_topic(topic)
+        if endpoint.topic_type == type_name
+    ]
+    if not publishers:
+        return None
+
+    transient = all(
+        profile.durability == DurabilityPolicy.TRANSIENT_LOCAL
+        for profile in publishers
+    )
+    reliable = transient and all(
+        profile.reliability == ReliabilityPolicy.RELIABLE
+        for profile in publishers
+    )
+    return (
+        ReliabilityPolicy.RELIABLE if reliable else ReliabilityPolicy.BEST_EFFORT,
+        DurabilityPolicy.TRANSIENT_LOCAL if transient else DurabilityPolicy.VOLATILE,
+    )
+
+
 def run(node):
     commands = queue.SimpleQueue()
     threading.Thread(target=read_commands, args=(commands,), daemon=True).start()
+    requested = set()
+    active_profiles = {}
     subscriptions = {}
     latest = {}
     last_graph = None
@@ -107,46 +132,19 @@ def run(node):
             command = commands.get()
             if command is None:
                 return
-            topic, type_name = command["topic"], command["type"]
+            topic, type_name = command.get("topic"), command.get("type")
+            if not isinstance(topic, str) or not isinstance(type_name, str):
+                continue
             key = (topic, type_name)
-            if command["action"] == "unsubscribe":
+            if command.get("action") == "unsubscribe":
+                requested.discard(key)
+                active_profiles.pop(key, None)
                 subscription = subscriptions.pop(key, None)
                 if subscription is not None:
                     node.destroy_subscription(subscription)
                 latest.pop(key, None)
-                continue
-            if command["action"] != "subscribe" or key in subscriptions:
-                continue
-            try:
-                publishers = [
-                    endpoint for endpoint in node.get_publishers_info_by_topic(topic)
-                    if endpoint.topic_type == type_name
-                ]
-                transient = bool(publishers) and all(
-                    endpoint.qos_profile.durability == DurabilityPolicy.TRANSIENT_LOCAL
-                    for endpoint in publishers
-                )
-                qos = QoSProfile(
-                    depth=1,
-                    reliability=(
-                        ReliabilityPolicy.RELIABLE if transient and all(
-                            endpoint.qos_profile.reliability == ReliabilityPolicy.RELIABLE
-                            for endpoint in publishers
-                        ) else ReliabilityPolicy.BEST_EFFORT
-                    ),
-                    durability=(
-                        DurabilityPolicy.TRANSIENT_LOCAL if transient
-                        else DurabilityPolicy.VOLATILE
-                    ),
-                )
-                subscriptions[key] = node.create_subscription(
-                    get_message(type_name),
-                    topic,
-                    lambda message, key=key: latest.__setitem__(key, message),
-                    qos,
-                )
-            except Exception as error:
-                send("topic_error", topic=topic, type=type_name, message=str(error))
+            elif command.get("action") == "subscribe":
+                requested.add(key)
 
         rclpy.spin_once(node, timeout_sec=0.05)
         now = time.monotonic()
@@ -155,6 +153,31 @@ def run(node):
             if graph != last_graph:
                 send("graph", **graph)
                 last_graph = graph
+            # Saved widgets may request a topic before its publisher exists.
+            # Re-evaluate DDS QoS when publishers appear or change.
+            for key in requested:
+                topic, type_name = key
+                profile = publisher_profile(node, topic, type_name)
+                if profile == active_profiles.get(key):
+                    continue
+                old = subscriptions.pop(key, None)
+                if old is not None:
+                    node.destroy_subscription(old)
+                latest.pop(key, None)
+                if profile is None:
+                    active_profiles.pop(key, None)
+                    continue
+                active_profiles[key] = profile
+                reliability, durability = profile
+                try:
+                    subscriptions[key] = node.create_subscription(
+                        get_message(type_name),
+                        topic,
+                        lambda message, key=key: latest.__setitem__(key, message),
+                        QoSProfile(depth=1, reliability=reliability, durability=durability),
+                    )
+                except Exception as error:
+                    send("topic_error", topic=topic, type=type_name, message=str(error))
             next_graph = now + 0.75
         if now >= next_sample:
             for (topic, type_name), message in latest.items():
